@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>日程調整</title>
+
+  <!-- PWA設定 & iPhone / Android用アプリアイコン指定 -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="日程調整">
+  <link rel="apple-touch-icon" href="icon.png">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+
+  <style>
+    /* ライトモード（標準） */
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --header-bg: #ffffff;
+      --text: #1e293b;
+      --text-sub: #64748b;
+      --border: #e2e8f0;
+      --accent: #eff6ff;
+      --accent-soft: rgba(239, 246, 255, 0.55);
+      --accent-border: #93c5fd;
+      --input-bg: #ffffff;
+      --table-header: #f1f5f9;
+      --card-active: #f1f5f9;
+      --danger: #ef4444;
+      --danger-bg: #fee2e2;
+      --overlay-bg: rgba(0, 0, 0, 0.45);
+      --ng-stripe-1: rgba(148, 163, 184, 0.14);
+      --ng-stripe-2: rgba(148, 163, 184, 0.26);
+      --travel-stripe-1: rgba(59, 130, 246, 0.05);
+      --travel-stripe-2: rgba(59, 130, 246, 0.11);
+      --almost-bg: rgba(148, 163, 184, 0.1);
+      --almost-border: #94a3b8;
+      --ok-green: #10b981;
+    }
+
+    /* 端末設定に合わせたダークモード */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #3b82f6;
+        --bg: #0b1120;
+        --card-bg: #1e293b;
+        --header-bg: #111827;
+        --text: #f1f5f9;
+        --text-sub: #94a3b8;
+        --border: #334155;
+        --accent: #1e3a5f;
+        --accent-soft: rgba(30, 58, 95, 0.45);
+        --accent-border: #3b82f6;
+        --input-bg: #0f172a;
+        --table-header: #0f172a;
+        --card-active: #334155;
+        --danger: #f87171;
+        --danger-bg: #451a1a;
+        --overlay-bg: rgba(0, 0, 0, 0.75);
+        --ng-stripe-1: rgba(148, 163, 184, 0.08);
+        --ng-stripe-2: rgba(148, 163, 184, 0.18);
+        --travel-stripe-1: rgba(59, 130, 246, 0.04);
+        --travel-stripe-2: rgba(59, 130, 246, 0.09);
+        --almost-bg: rgba(148, 163, 184, 0.08);
+        --almost-border: #64748b;
+        --ok-green: #34d399;
+      }
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "HiraginoSans-W4", "Hiragino Sans W4", sans-serif;
+      font-weight: normal;
+      -webkit-font-smoothing: antialiased;
+      background-color: var(--bg);
+      color: var(--text);
+      padding-bottom: calc(65px + env(safe-area-inset-bottom));
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    b, strong, th,
+    .card-title,
+    .modal-title,
+    .tab-item,
+    .btn,
+    .day-head,
+    .free-block,
+    .type-badge,
+    .cand-banner-title,
+    .cand-chip,
+    .toggle-pill,
+    .btn-today-mini,
+    .btn-copy-mini {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "HiraginoSans-W6", "Hiragino Sans W6", sans-serif;
+      font-weight: 600;
+    }
+
+    .page { display: none; width: 100%; }
+    .page.active { display: block; }
+
+    /* 最上部：「今月の候補」＋ 左右の週送り三角バナー */
+    .candidate-banner {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .week-nav-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 34px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 0.9rem;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .week-nav-btn:active {
+      background: var(--card-active);
+    }
+
+    .cand-center {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .cand-banner-title {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-today-mini {
+      background: var(--accent);
+      border: 1px solid var(--accent-border);
+      color: var(--primary);
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-size: 0.7rem;
+      cursor: pointer;
+    }
+    .btn-today-mini:active {
+      opacity: 0.75;
+    }
+
+    .cand-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .cand-scroll::-webkit-scrollbar {
+      display: none;
+    }
+
+    .cand-chip {
+      background: var(--accent);
+      border: 1px solid var(--accent-border);
+      color: var(--primary);
+      font-size: 0.78rem;
+      padding: 3px 9px;
+      border-radius: 99px;
+      white-space: nowrap;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .cand-chip:active {
+      opacity: 0.75;
+    }
+
+    .cand-empty {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+    }
+
+    /* 2段目：凡例・あと1人スイッチ・間隔ズームバー */
+    .sub-bar {
+      background: var(--bg);
+      padding: 8px 16px 0 16px;
+      max-width: 650px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .legend-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+    }
+
+    .legend-box {
+      width: 13px;
+      height: 13px;
+      background: var(--accent);
+      border: 1.5px solid var(--primary);
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .legend-box.maybe {
+      background: var(--accent-soft);
+      border: 1.5px dashed var(--primary);
+    }
+
+    .right-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toggle-pill {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      border-radius: 8px;
+      padding: 0 9px;
+      height: 28px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: 0.15s;
+    }
+    .toggle-pill.active {
+      background: var(--accent);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .zoom-group {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--card-bg);
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      width: 30px;
+      height: 28px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .zoom-btn:first-child {
+      border-right: 1px solid var(--border);
+    }
+    .zoom-btn:active {
+      background: var(--card-active);
+    }
+
+    /* メインコンテナ */
+    .container {
+      width: 100%;
+      max-width: 650px;
+      margin: 0 auto;
+      padding: 10px 16px 14px 16px;
+    }
+
+    /* カレンダーカード */
+    .calendar-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      touch-action: pan-y;
+    }
+
+    .cal-header {
+      display: flex;
+      background: var(--table-header);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .time-gutter-head {
+      width: 46px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+    }
+
+    .day-head {
+      flex: 1;
+      text-align: center;
+      padding: 9px 2px;
+      font-size: 0.82rem;
+      color: var(--primary);
+      border-right: 1px solid var(--border);
+    }
+    .day-head:last-child {
+      border-right: none;
+    }
+
+    .cal-body {
+      display: flex;
+      position: relative;
+      overflow-y: auto;
+      max-height: calc(100vh - 205px);
+    }
+
+    .time-gutter {
+      width: 46px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .time-label {
+      font-size: 0.72rem;
+      color: var(--text-sub);
+      text-align: right;
+      padding-right: 6px;
+      position: relative;
+    }
+    .time-label span {
+      position: relative;
+      top: -7px;
+    }
+
+    .days-grid {
+      display: flex;
+      flex: 1;
+      position: relative;
+    }
+
+    .day-col {
+      flex: 1;
+      position: relative;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .day-col:last-child {
+      border-right: none;
+    }
+
+    .hour-cell {
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .half-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 1px dashed var(--border);
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    /* 全員空いている時間帯ブロック（実線の青枠） */
+    .free-block {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      background: var(--accent);
+      border: 1.5px solid var(--primary);
+      border-radius: 6px;
+      padding: 3px 5px;
+      font-size: 0.7rem;
+      color: var(--primary);
+      overflow: hidden;
+      pointer-events: none;
+      line-height: 1.25;
+      z-index: 3;
+    }
+
+    /* 誰かが△（できれば避けたい）を入れている時間帯（点線の青枠） */
+    .free-block.maybe {
+      background: var(--accent-soft);
+      border: 1.5px dashed var(--primary);
+      opacity: 0.92;
+      z-index: 2;
+    }
+
+    /* あと1人調整できれば開催できる時間帯（薄いグレー点線枠） */
+    .free-block.almost {
+      background: var(--almost-bg);
+      border: 1.5px dashed var(--almost-border);
+      color: var(--text-sub);
+      z-index: 2;
+    }
+
+    /* 自分の入力予定（薄い斜線で参考表示） */
+    .my-ng-block {
+      position: absolute;
+      left: 3px;
+      right: 3px;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--ng-stripe-1),
+        var(--ng-stripe-1) 4px,
+        var(--ng-stripe-2) 4px,
+        var(--ng-stripe-2) 8px
+      );
+      border-radius: 4px;
+      font-size: 0.65rem;
+      color: var(--text-sub);
+      padding: 2px 4px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* 自分の移動時間バッファ */
+    .my-travel-block {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      background: repeating-linear-gradient(
+        45deg,
+        var(--travel-stripe-1),
+        var(--travel-stripe-1) 3px,
+        var(--travel-stripe-2) 3px,
+        var(--travel-stripe-2) 6px
+      );
+      border-radius: 3px;
+      font-size: 0.6rem;
+      color: var(--text-sub);
+      opacity: 0.8;
+      padding: 1px 4px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .footer-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding: 0 4px;
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      gap: 8px;
+    }
+
+    .sync-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      color: var(--text-sub);
+    }
+    .sync-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--ok-green);
+      display: inline-block;
+    }
+    .sync-dot.connecting {
+      background: #f59e0b;
+    }
+
+    /* カード共通（入力タブ・設定タブ） */
+    .section-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      margin-bottom: 12px;
+      line-height: 1.45;
+    }
+
+    .name-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .name-input-row input[type="text"],
+    .setting-select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text);
+    }
+
+    .setting-select {
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 10px auto;
+      padding-right: 30px;
+    }
+
+    /* 履歴リスト（タップで編集） */
+    .history-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .history-item:active {
+      background: var(--card-active);
+    }
+
+    .history-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .type-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 30px;
+      height: 26px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .type-badge.ng {
+      background: var(--card-active);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .type-badge.maybe {
+      background: var(--accent);
+      color: var(--primary);
+      border: 1px solid var(--accent-border);
+    }
+
+    .repeat-tag {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--primary);
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    .history-text-wrap {
+      overflow: hidden;
+    }
+    .history-main {
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+    .history-sub {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .item-empty {
+      font-size: 0.85rem;
+      color: var(--text-sub);
+      padding: 4px 0;
+    }
+
+    /* ポップアップ（モーダル）共通 */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--overlay-bg);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+      padding: 16px;
+    }
+
+    .modal-box {
+      background: var(--card-bg);
+      color: var(--text);
+      width: 100%;
+      max-width: 400px;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      max-height: 90vh;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 1.05rem;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--text-sub);
+      margin-bottom: 6px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="time"],
+    .form-group select {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--input-bg);
+      color: var(--text);
+      -webkit-appearance: none;
+      appearance: none;
+    }
+
+    .form-group select {
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 10px auto;
+      padding-right: 30px;
+    }
+
+    input[type="time"] {
+      text-align: center;
+    }
+
+    .time-range-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .segment-group {
+      display: flex;
+      gap: 8px;
+    }
+    .segment-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-sub);
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-align: center;
+      transition: 0.15s;
+    }
+    .segment-btn.active {
+      background: var(--accent);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .modal-actions-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: center;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--card-active); color: var(--text); border: 1px solid var(--border); }
+    .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--border); }
+
+    /* 詳細モーダル内のリスト */
+    .detail-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.88rem;
+    }
+    .detail-row {
+      padding: 9px 11px;
+      border-radius: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .detail-row.free {
+      background: var(--accent);
+      border-color: var(--accent-border);
+      color: var(--primary);
+    }
+    .detail-row.maybe {
+      background: var(--accent-soft);
+      border: 1px dashed var(--accent-border);
+      color: var(--primary);
+    }
+    .detail-row.almost {
+      background: var(--almost-bg);
+      border: 1px dashed var(--almost-border);
+      color: var(--text);
+    }
+
+    .detail-row-text {
+      flex: 1;
+      line-height: 1.35;
+    }
+    .detail-sub-note {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: normal;
+      opacity: 0.85;
+      margin-top: 2px;
+    }
+
+    .btn-copy-mini {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-copy-mini:active {
+      opacity: 0.8;
+    }
+
+    /* 下部タブバー */
+    .tab-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      background: var(--header-bg);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 10;
+      padding-bottom: env(safe-area-inset-bottom);
+      box-sizing: content-box;
+    }
+
+    .tab-item {
+      flex: 1;
+      height: 54px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 0.95rem;
+      color: var(--text-sub);
+      cursor: pointer;
+      border-top: 3px solid transparent;
+      user-select: none;
+    }
+
+    .tab-item.active {
+      color: var(--primary);
+      border-top: 3px solid var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. カレンダータブ -->
+  <div id="pageCalendar" class="page active">
+
+    <!-- 最上部：「今月の候補」バナー ＋ 左右の1週間移動三角 -->
+    <div class="candidate-banner">
+      <button type="button" class="week-nav-btn" onclick="shiftWeek(-1)" title="1週間前">◀</button>
+
+      <div class="cand-center">
+        <div class="cand-banner-title">
+          <span id="monthCandidateLabel">今月の候補（×・△なし）</span>
+          <button type="button" class="btn-today-mini" id="btnResetWeek" style="display: none;" onclick="resetToThisWeek()">今週へ戻る</button>
+        </div>
+        <div class="cand-scroll" id="monthCandidateList"></div>
+      </div>
+
+      <button type="button" class="week-nav-btn" onclick="shiftWeek(1)" title="1週間後">▶</button>
+    </div>
+
+    <!-- 2段目：凡例・あと1人スイッチ・間隔ズーム -->
+    <div class="sub-bar">
+      <div class="legend-group">
+        <div class="legend">
+          <div class="legend-box"></div>
+          <span>全員OK</span>
+        </div>
+        <div class="legend">
+          <div class="legend-box maybe"></div>
+          <span>△あり</span>
+        </div>
+      </div>
+
+      <div class="right-controls">
+        <button type="button" class="toggle-pill" id="btnAlmostOne" onclick="toggleAlmostOne()">あと1人</button>
+        <div class="zoom-group">
+          <button type="button" class="zoom-btn" onclick="changeZoom(-8)" title="間隔を狭く">－</button>
+          <button type="button" class="zoom-btn" onclick="changeZoom(8)" title="間隔を広く">＋</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- カレンダー本体 -->
+    <div class="container">
+      <div class="calendar-card" id="calendarWrapper">
+        <div class="cal-header" id="calHeader"></div>
+        <div class="cal-body" id="calBody">
+          <div class="time-gutter" id="timeGutter"></div>
+          <div class="days-grid" id="daysGrid"></div>
+        </div>
+      </div>
+
+      <div class="footer-info">
+        <span id="memberCountText">読み込み中...</span>
+        <span class="sync-badge"><span class="sync-dot connecting" id="syncDot"></span><span id="filterSummaryText">スケジュールの長さ：1時間</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 入力タブ -->
+  <div id="pageInput" class="page">
+    <div class="container">
+      
+      <!-- 予定（× / △）追加ボタン -->
+      <div class="section-card">
+        <div class="card-title">予定の登録</div>
+        <p class="card-desc">
+          都合が悪い時間（×）や、できれば避けたい時間（△）を登録してください。設定した移動時間も自動で前後から差し引かれ、グループ全員にリアルタイム共有されます。
+        </p>
+        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="openScheduleModal()">＋ 時間帯を追加する</button>
+      </div>
+
+      <!-- 履歴（過去1ヶ月分〜直近・タップで編集/1日だけ削除） -->
+      <div class="section-card">
+        <div class="card-title">
+          <span>履歴</span>
+          <span style="font-size: 0.78rem; font-weight: normal; color: var(--text-sub);">過去1ヶ月分・タップで編集/削除</span>
+        </div>
+        <ul class="history-list" id="historyListContainer"></ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. 設定タブ -->
+  <div id="pageSettings" class="page">
+    <div class="container">
+
+      <!-- あなたの名前 -->
+      <div class="section-card">
+        <div class="card-title">あなたの名前</div>
+        <div class="name-input-row">
+          <input type="text" id="userNameInput" placeholder="例：田中">
+          <button type="button" class="btn btn-primary" style="flex: 0 0 auto; padding: 10px 16px;" onclick="saveSettings(true)">保存</button>
+        </div>
+      </div>
+
+      <!-- スケジュールの長さ（“以上”なし） -->
+      <div class="section-card">
+        <div class="card-title">スケジュールの長さ</div>
+        <p class="card-desc">
+          設定した長さのスケジュールを開催できる時間帯だけを候補として表示します。
+        </p>
+        <select id="minDurationSelect" class="setting-select" onchange="saveSettings()">
+          <option value="30">30分</option>
+          <option value="60" selected>1時間</option>
+          <option value="90">1時間30分</option>
+          <option value="120">2時間</option>
+          <option value="180">3時間</option>
+          <option value="240">4時間</option>
+        </select>
+      </div>
+
+      <!-- あなたの片道移動時間（10分刻み・1時間半まで） -->
+      <div class="section-card">
+        <div class="card-title">あなたの片道移動時間</div>
+        <p class="card-desc">
+          予定（×・△）の前後から移動時間を自動で差し引いて、実際に集合場所へ間に合う時間だけを計算します。
+        </p>
+        <select id="travelTimeSelect" class="setting-select" onchange="saveSettings()">
+          <option value="0" selected>0分（移動なし・オンライン）</option>
+          <option value="10">片道 10分</option>
+          <option value="20">片道 20分</option>
+          <option value="30">片道 30分</option>
+          <option value="40">片道 40分</option>
+          <option value="50">片道 50分</option>
+          <option value="60">片道 1時間</option>
+          <option value="70">片道 1時間10分</option>
+          <option value="80">片道 1時間20分</option>
+          <option value="90">片道 1時間30分</option>
+        </select>
+      </div>
+
+      <!-- グループ共有設定（ルーム合言葉 & 招待URLコピー） -->
+      <div class="section-card">
+        <div class="card-title">グループ共有（ルーム合言葉）</div>
+        <p class="card-desc">
+          同じ合言葉を入力しているメンバー同士で予定がリアルタイム同期されます。招待リンクを送ると合言葉も自動で引き継がれます。
+        </p>
+        <div class="name-input-row" style="margin-bottom: 10px;">
+          <input type="text" id="roomIdInput" placeholder="例：weekend-group">
+          <button type="button" class="btn btn-secondary" style="flex: 0 0 auto; padding: 10px 14px;" onclick="changeRoom()">切替</button>
+        </div>
+        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="copyInviteLink()">友達に送る招待URLをコピー</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ポップアップ①：時間帯の追加・編集モーダル -->
+  <div class="modal-overlay" id="scheduleModal" onclick="if(event.target===this) closeModal('scheduleModal')">
+    <div class="modal-box">
+      <div class="modal-title" id="scheduleModalTitle">時間帯の追加</div>
+      <input type="hidden" id="editRuleId">
+      <input type="hidden" id="editTargetDateStr">
+
+      <div class="form-group">
+        <label>種別</label>
+        <div class="segment-group">
+          <div class="segment-btn active" id="segNg" onclick="selectItemType('ng')">× 都合が悪い</div>
+          <div class="segment-btn" id="segMaybe" onclick="selectItemType('maybe')">△ できれば避けたい</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>繰り返し</label>
+        <div class="segment-group">
+          <div class="segment-btn active" id="repNone" onclick="selectRepeatType('none')">1回のみ</div>
+          <div class="segment-btn" id="repWeekly" onclick="selectRepeatType('weekly')">↻ 毎週（同じ曜日）</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label id="daySelectLabel">日付</label>
+        <select id="modalDaySelect"></select>
+      </div>
+
+      <div class="form-group">
+        <label>時間帯（開始 〜 終了）</label>
+        <div class="time-range-row">
+          <input type="time" id="modalStartTime" value="10:00" step="900">
+          <span style="color: var(--text-sub); font-size: 0.9rem;">〜</span>
+          <input type="time" id="modalEndTime" value="13:00" step="900">
+        </div>
+      </div>
+
+      <div class="form-group" id="memoGroup" style="display: none;">
+        <label>メモ（任意：理由や調整できる条件など）</label>
+        <input type="text" id="modalMemoInput" placeholder="例：18時までバイト、どうしてもなら調整可">
+      </div>
+
+      <!-- 新規・単発編集時のボタン -->
+      <div class="modal-actions" id="standardActions">
+        <button type="button" id="btnDeleteSingle" class="btn btn-danger" style="display: none;" onclick="deleteSingleItem()">削除</button>
+        <button type="button" class="btn btn-secondary" onclick="closeModal('scheduleModal')">キャンセル</button>
+        <button type="button" class="btn btn-primary" onclick="saveScheduleRule()">保存</button>
+      </div>
+
+      <!-- 毎週予定の編集時 -->
+      <div class="modal-actions-col" id="weeklyActions" style="display: none;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('scheduleModal')">キャンセル</button>
+          <button type="button" class="btn btn-primary" onclick="saveScheduleRule()">変更を保存</button>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 2px;">
+          <button type="button" class="btn btn-danger" id="btnSkipThisDay" onclick="skipThisDayOnly()">この日だけ削除</button>
+          <button type="button" class="btn btn-danger" onclick="deleteAllWeekly()">繰り返しを全削除</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ポップアップ②：日付ごとの空き状況詳細モーダル -->
+  <div class="modal-overlay" id="detailModal" onclick="if(event.target===this) closeModal('detailModal')">
+    <div class="modal-box">
+      <div class="modal-title" id="detailModalTitle">空き状況</div>
+
+      <div class="form-group">
+        <label id="detailFreeLabel">開催可能な時間帯</label>
+        <ul class="detail-list" id="detailFreeList"></ul>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 4px;">
+        <label>メンバー別の × / △ 予定（移動時間含む）</label>
+        <ul class="detail-list" id="detailBusyList"></ul>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" onclick="closeModal('detailModal')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 下部タブバー（3タブ構成） -->
+  <div class="tab-bar">
+    <div class="tab-item active" id="tabCalendar" onclick="switchTab('pageCalendar')">カレンダー</div>
+    <div class="tab-item" id="tabInput" onclick="switchTab('pageInput')">入力</div>
+    <div class="tab-item" id="tabSettings" onclick="switchTab('pageSettings')">設定</div>
+  </div>
+
+  <!-- Firebase SDK (Compat版) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // ==========================================
+    // Firebase 初期化設定
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxjv5LobSsxJgxVN5BW1quUZAiyVRdh4E",
+      authDomain: "weekend-schedule-4d70e.firebaseapp.com",
+      projectId: "weekend-schedule-4d70e",
+      storageBucket: "weekend-schedule-4d70e.firebasestorage.app",
+      messagingSenderId: "69784615271",
+      appId: "1:69784615271:web:13b3855928626189c117c2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ==========================================
+    // ユーザーID & ルーム（合言葉）管理
+    // ==========================================
+    function getOrCreateUserId() {
+      let uid = localStorage.getItem('scheduleUserId_v1');
+      if (!uid) {
+        uid = 'user_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        localStorage.setItem('scheduleUserId_v1', uid);
+      }
+      return uid;
+    }
+    const MY_USER_ID = getOrCreateUserId();
+
+    function getInitialRoomId() {
+      const params = new URLSearchParams(window.location.search);
+      const urlRoom = params.get('room');
+      if (urlRoom && urlRoom.trim()) {
+        const clean = urlRoom.trim();
+        localStorage.setItem('scheduleRoomId_v1', clean);
+        return clean;
+      }
+      return localStorage.getItem('scheduleRoomId_v1') || 'default-group';
+    }
+    let currentRoomId = getInitialRoomId();
+
+    // クラウドからリアルタイム受信した全メンバーデータ
+    let roomMembersData = {};
+    let unsubscribeRoom = null;
+
+    const START_HOUR = 8;
+    const END_HOUR = 22;
+    let hourHeight = 46;
+    let weekOffset = 0;
+    let showAlmostOne = false;
+    let selectedType = 'ng';
+    let selectedRepeat = 'none';
+
+    const RULES_STORAGE_KEY = 'scheduleMyRules_v1';
+    const ONE_MONTH_MS = 31 * 24 * 60 * 60 * 1000;
+
+    function toDateStr(d) {
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDayLabel(dateStr) {
+      const d = new Date(dateStr + 'T00:00:00');
+      const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+      return `${d.getMonth() + 1}/${d.getDate()}(${w})`;
+    }
+
+    function getDayOfWeek(dateStr) {
+      return new Date(dateStr + 'T00:00:00').getDay();
+    }
+
+    function getBaseSaturday() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const day = today.getDay();
+      const diffToSat = (day === 0) ? -1 : (6 - day);
+      const sat = new Date(today);
+      sat.setDate(today.getDate() + diffToSat);
+      return sat;
+    }
+
+    function getVisibleWeekendDays() {
+      const baseSat = getBaseSaturday();
+      baseSat.setDate(baseSat.getDate() + weekOffset * 7);
+
+      const list = [];
+      for (let w = 0; w < 2; w++) {
+        const sat = new Date(baseSat);
+        sat.setDate(baseSat.getDate() + w * 7);
+        const sun = new Date(sat);
+        sun.setDate(sat.getDate() + 1);
+
+        list.push({ dateStr: toDateStr(sat), label: formatDayLabel(toDateStr(sat)) });
+        list.push({ dateStr: toDateStr(sun), label: formatDayLabel(toDateStr(sun)) });
+      }
+      return list;
+    }
+
+    function getSelectableWeekendDays() {
+      const baseSat = getBaseSaturday();
+      baseSat.setDate(baseSat.getDate() - 28);
+      const list = [];
+      for (let w = 0; w < 12; w++) {
+        const sat = new Date(baseSat);
+        sat.setDate(baseSat.getDate() + w * 7);
+        const sun = new Date(sat);
+        sun.setDate(sat.getDate() + 1);
+        list.push({ dateStr: toDateStr(sat), label: formatDayLabel(toDateStr(sat)) });
+        list.push({ dateStr: toDateStr(sun), label: formatDayLabel(toDateStr(sun)) });
+      }
+      return list;
+    }
+
+    function getScheduleDuration() {
+      return Number(localStorage.getItem('scheduleMinDuration') || '60');
+    }
+
+    function getMyTravelMin() {
+      return Number(localStorage.getItem('scheduleTravelMin') || '0');
+    }
+
+    function getMyRules() {
+      const raw = localStorage.getItem(RULES_STORAGE_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      const cutoff = Date.now() - ONE_MONTH_MS;
+      const valid = list.filter(r => r.repeat === 'weekly' || (r.createdAt || Date.now()) >= cutoff);
+      if (valid.length !== list.length) {
+        localStorage.setItem(RULES_STORAGE_KEY, JSON.stringify(valid));
+      }
+      return valid;
+    }
+
+    function saveMyRules(list) {
+      localStorage.setItem(RULES_STORAGE_KEY, JSON.stringify(list));
+      syncMyDataToCloud();
+    }
+
+    /* 自分のデータ（名前・移動時間・ルール一覧）を Firestore へ保存 */
+    function syncMyDataToCloud() {
+      const myName = document.getElementById('userNameInput').value.trim();
+      const myRules = getMyRules();
+      const myTravel = getMyTravelMin();
+
+      // 名前も予定もまだ完全に空の場合はクラウドに空データを書かない
+      if (!myName && myRules.length === 0) return;
+
+      const dot = document.getElementById('syncDot');
+      if (dot) dot.classList.add('connecting');
+
+      db.collection('rooms').doc(currentRoomId).collection('members').doc(MY_USER_ID).set({
+        name: myName || '名無し',
+        travelMin: myTravel,
+        rules: myRules,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        if (dot) dot.classList.remove('connecting');
+      }).catch(err => {
+        console.error('Sync error:', err);
+      });
+    }
+
+    /* Firestore から同じルームの全メンバーデータをリアルタイム受信 */
+    function subscribeToRoom(roomId) {
+      if (unsubscribeRoom) {
+        unsubscribeRoom();
+      }
+      const dot = document.getElementById('syncDot');
+      if (dot) dot.classList.add('connecting');
+
+      unsubscribeRoom = db.collection('rooms').doc(roomId).collection('members')
+        .onSnapshot(snapshot => {
+          const dataMap = {};
+          snapshot.forEach(doc => {
+            dataMap[doc.id] = doc.data();
+          });
+          roomMembersData = dataMap;
+
+          // 自分のデータがクラウドに未登録でローカルにある場合は同期する
+          if (!dataMap[MY_USER_ID]) {
+            syncMyDataToCloud();
+          }
+
+          if (dot) dot.classList.remove('connecting');
+          renderCalendar();
+        }, err => {
+          console.error('Firestore listen error:', err);
+          document.getElementById('memberCountText').textContent = '通信エラー（再読み込みしてください）';
+        });
+    }
+
+    /* 指定日の予定を任意のルール配列から展開する共通関数 */
+    function expandRulesForDate(rules, dateStr) {
+      const dow = getDayOfWeek(dateStr);
+      const result = [];
+
+      (rules || []).forEach(rule => {
+        if (rule.repeat === 'weekly') {
+          const exceptions = rule.exceptions || [];
+          if (dateStr >= rule.dateStr && getDayOfWeek(rule.dateStr) === dow && !exceptions.includes(dateStr)) {
+            result.push({
+              ruleId: rule.id,
+              dateStr,
+              start: rule.start,
+              end: rule.end,
+              type: rule.type,
+              memo: rule.memo,
+              isWeekly: true
+            });
+          }
+        } else {
+          if (rule.dateStr === dateStr) {
+            result.push({
+              ruleId: rule.id,
+              dateStr,
+              start: rule.start,
+              end: rule.end,
+              type: rule.type,
+              memo: rule.memo,
+              isWeekly: false
+            });
+          }
+        }
+      });
+      return result;
+    }
+
+    function getMyItemsForDate(dateStr) {
+      return expandRulesForDate(getMyRules(), dateStr);
+    }
+
+    function getExpandedHistoryList() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const start = new Date(today);
+      start.setDate(today.getDate() - 31);
+
+      const end = new Date(today);
+      end.setDate(today.getDate() + 28);
+
+      const items = [];
+      const cur = new Date(start);
+      while (cur <= end) {
+        const dow = cur.getDay();
+        if (dow === 0 || dow === 6) {
+          const dStr = toDateStr(cur);
+          items.push(...getMyItemsForDate(dStr));
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+      return items.sort((a, b) => a.dateStr.localeCompare(b.dateStr) || a.start - b.start);
+    }
+
+    /* クラウド上の全メンバー＋自分の最新データを合体させて指定日の予定一覧を返す */
+    function getAllResponsesForDate(dateStr) {
+      const combined = [];
+      const myName = document.getElementById('userNameInput').value.trim();
+      const myTravel = getMyTravelMin();
+      const myRules = getMyRules();
+
+      // 1. まず自分のデータを追加（名前か予定がある場合）
+      if (myName || myRules.length > 0) {
+        combined.push({
+          uid: MY_USER_ID,
+          name: myName || 'あなた',
+          travelMin: myTravel,
+          items: expandRulesForDate(myRules, dateStr)
+        });
+      }
+
+      // 2. クラウド上の他メンバーのデータを追加
+      Object.keys(roomMembersData).forEach(uid => {
+        if (uid === MY_USER_ID) return;
+        const member = roomMembersData[uid];
+        combined.push({
+          uid,
+          name: member.name || 'メンバー',
+          travelMin: member.travelMin || 0,
+          items: expandRulesForDate(member.rules || [], dateStr)
+        });
+      });
+
+      return combined;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
+      document.getElementById('minDurationSelect').value = String(getScheduleDuration());
+      document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
+      document.getElementById('roomIdInput').value = currentRoomId;
+
+      renderCalendar();
+      renderHistoryList();
+      subscribeToRoom(currentRoomId);
+    });
+
+    function shiftWeek(delta) {
+      weekOffset += delta;
+      renderCalendar();
+    }
+
+    function resetToThisWeek() {
+      weekOffset = 0;
+      renderCalendar();
+    }
+
+    function toggleAlmostOne() {
+      showAlmostOne = !showAlmostOne;
+      document.getElementById('btnAlmostOne').classList.toggle('active', showAlmostOne);
+      renderCalendar();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      if (tabId === 'pageCalendar') {
+        document.getElementById('tabCalendar').classList.add('active');
+        renderCalendar();
+      } else if (tabId === 'pageInput') {
+        document.getElementById('tabInput').classList.add('active');
+        renderHistoryList();
+      } else {
+        document.getElementById('tabSettings').classList.add('active');
+      }
+    }
+
+    function timeToMin(str) {
+      const [h, m] = str.split(':').map(Number);
+      return h * 60 + m;
+    }
+
+    function minToTime(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${h}:${String(m).padStart(2, '0')}`;
+    }
+
+    function minToInputTime(min) {
+      const h = Math.floor(min / 60);
+      const m = min % 60;
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    }
+
+    function formatDurationLabel(mins) {
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h}時間${m}分`;
+      if (h > 0) return `${h}時間`;
+      return `${m}分`;
+    }
+
+    function saveSettings(showAlert = false) {
+      const name = document.getElementById('userNameInput').value.trim();
+      const minDur = document.getElementById('minDurationSelect').value;
+      const travel = document.getElementById('travelTimeSelect').value;
+
+      localStorage.setItem('scheduleUserName', name);
+      localStorage.setItem('scheduleMinDuration', minDur);
+      localStorage.setItem('scheduleTravelMin', travel);
+
+      syncMyDataToCloud();
+      renderCalendar();
+
+      if (showAlert) {
+        alert('設定を保存し、グループに反映しました！');
+      }
+    }
+
+    function changeRoom() {
+      const newRoom = document.getElementById('roomIdInput').value.trim();
+      if (!newRoom) {
+        alert('ルーム合言葉を入力してください。');
+        return;
+      }
+      currentRoomId = newRoom;
+      localStorage.setItem('scheduleRoomId_v1', currentRoomId);
+      roomMembersData = {};
+      subscribeToRoom(currentRoomId);
+      syncMyDataToCloud();
+      alert(`ルーム「${currentRoomId}」に切り替えました！`);
+    }
+
+    function copyInviteLink() {
+      const baseUrl = window.location.origin + window.location.pathname;
+      const inviteUrl = `${baseUrl}?room=${encodeURIComponent(currentRoomId)}`;
+      const msg = `週末の日程調整アプリです！ここから予定を入れてね👇\n${inviteUrl}`;
+
+      navigator.clipboard.writeText(msg).then(() => {
+        alert(`招待メッセージをコピーしました！そのままLINE等に貼り付けられます。\n\n${msg}`);
+      }).catch(() => {
+        prompt('以下のURLをコピーして共有してください：', inviteUrl);
+      });
+    }
+
+    function renderHistoryList() {
+      const listEl = document.getElementById('historyListContainer');
+      const history = getExpandedHistoryList();
+
+      if (history.length === 0) {
+        listEl.innerHTML = `<li class="item-empty">過去1ヶ月の登録履歴はありません</li>`;
+        return;
+      }
+
+      listEl.innerHTML = history.map(item => {
+        const isMaybe = item.type === 'maybe';
+        const badgeText = isMaybe ? '△' : '×';
+        const badgeClass = isMaybe ? 'maybe' : 'ng';
+        const dateLabel = formatDayLabel(item.dateStr);
+        const repeatBadge = item.isWeekly ? `<span class="repeat-tag">↻ 毎週</span>` : '';
+        const subText = item.memo
+          ? item.memo
+          : (isMaybe ? 'できれば避けたい（調整可）' : '都合が悪い（参加不可）');
+
+        return `
+          <li class="history-item" onclick="openScheduleModal('${item.ruleId}', '${item.dateStr}')">
+            <div class="history-left">
+              <span class="type-badge ${badgeClass}">${badgeText}</span>
+              <div class="history-text-wrap">
+                <div class="history-main"><b>${dateLabel}</b>　${minToTime(item.start)} 〜 ${minToTime(item.end)}${repeatBadge}</div>
+                <div class="history-sub">${subText}</div>
+              </div>
+            </div>
+            <span style="color: var(--text-sub); font-size: 1.1rem; padding-left: 8px;">›</span>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function selectItemType(type) {
+      selectedType = type;
+      document.getElementById('segNg').classList.toggle('active', type === 'ng');
+      document.getElementById('segMaybe').classList.toggle('active', type === 'maybe');
+      document.getElementById('memoGroup').style.display = (type === 'maybe') ? 'block' : 'none';
+    }
+
+    function selectRepeatType(rep) {
+      selectedRepeat = rep;
+      document.getElementById('repNone').classList.toggle('active', rep === 'none');
+      document.getElementById('repWeekly').classList.toggle('active', rep === 'weekly');
+      document.getElementById('daySelectLabel').textContent = (rep === 'weekly') ? '開始日（この日以降の毎週同じ曜日）' : '日付';
+    }
+
+    function openScheduleModal(ruleId = null, targetDateStr = null) {
+      const selectableDays = getSelectableWeekendDays();
+      const daySelect = document.getElementById('modalDaySelect');
+      daySelect.innerHTML = selectableDays.map(d => `<option value="${d.dateStr}">${d.label}</option>`).join('');
+
+      const titleEl = document.getElementById('scheduleModalTitle');
+      const idInput = document.getElementById('editRuleId');
+      const targetDateInput = document.getElementById('editTargetDateStr');
+      const memoInput = document.getElementById('modalMemoInput');
+
+      const standardActions = document.getElementById('standardActions');
+      const weeklyActions = document.getElementById('weeklyActions');
+      const delSingleBtn = document.getElementById('btnDeleteSingle');
+
+      if (ruleId) {
+        const rules = getMyRules();
+        const target = rules.find(x => x.id === ruleId);
+        if (!target) return;
+
+        titleEl.textContent = target.repeat === 'weekly'
+          ? `${formatDayLabel(targetDateStr)} の毎週予定`
+          : '予定の編集';
+        idInput.value = target.id;
+        targetDateInput.value = targetDateStr || target.dateStr;
+
+        selectItemType(target.type || 'ng');
+        selectRepeatType(target.repeat || 'none');
+        daySelect.value = target.dateStr;
+        document.getElementById('modalStartTime').value = minToInputTime(target.start);
+        document.getElementById('modalEndTime').value = minToInputTime(target.end);
+        memoInput.value = target.memo || '';
+
+        if (target.repeat === 'weekly') {
+          standardActions.style.display = 'none';
+          weeklyActions.style.display = 'flex';
+          document.getElementById('btnSkipThisDay').textContent = `${formatDayLabel(targetDateStr)} だけ削除`;
+        } else {
+          standardActions.style.display = 'flex';
+          weeklyActions.style.display = 'none';
+          delSingleBtn.style.display = 'block';
+        }
+      } else {
+        titleEl.textContent = '時間帯の追加';
+        idInput.value = '';
+        targetDateInput.value = '';
+        selectItemType('ng');
+        selectRepeatType('none');
+
+        const visibleDays = getVisibleWeekendDays();
+        daySelect.value = visibleDays[0].dateStr;
+        document.getElementById('modalStartTime').value = '10:00';
+        document.getElementById('modalEndTime').value = '13:00';
+        memoInput.value = '';
+
+        standardActions.style.display = 'flex';
+        weeklyActions.style.display = 'none';
+        delSingleBtn.style.display = 'none';
+      }
+
+      document.getElementById('scheduleModal').style.display = 'flex';
+    }
+
+    function saveScheduleRule() {
+      const editId = document.getElementById('editRuleId').value;
+      const dateStr = document.getElementById('modalDaySelect').value;
+      const startStr = document.getElementById('modalStartTime').value;
+      const endStr = document.getElementById('modalEndTime').value;
+      const memo = (selectedType === 'maybe') ? document.getElementById('modalMemoInput').value.trim() : '';
+
+      if (!startStr || !endStr) return;
+      const start = timeToMin(startStr);
+      const end = timeToMin(endStr);
+      if (start >= end) {
+        alert('終了時刻は開始時刻より後にしてください。');
+        return;
+      }
+
+      const rules = getMyRules();
+      if (editId) {
+        const idx = rules.findIndex(x => x.id === editId);
+        if (idx !== -1) {
+          rules[idx] = { ...rules[idx], dateStr, start, end, type: selectedType, repeat: selectedRepeat, memo };
+        }
+      } else {
+        rules.push({
+          id: 'rule_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+          dateStr,
+          start,
+          end,
+          type: selectedType,
+          repeat: selectedRepeat,
+          memo,
+          exceptions: [],
+          createdAt: Date.now()
+        });
+      }
+
+      saveMyRules(rules);
+      renderHistoryList();
+      renderCalendar();
+      closeModal('scheduleModal');
+    }
+
+    function deleteSingleItem() {
+      const editId = document.getElementById('editRuleId').value;
+      if (!editId) return;
+      if (!confirm('この予定を削除しますか？')) return;
+
+      const rules = getMyRules().filter(x => x.id !== editId);
+      saveMyRules(rules);
+      renderHistoryList();
+      renderCalendar();
+      closeModal('scheduleModal');
+    }
+
+    function skipThisDayOnly() {
+      const editId = document.getElementById('editRuleId').value;
+      const targetDateStr = document.getElementById('editTargetDateStr').value;
+      if (!editId || !targetDateStr) return;
+
+      const rules = getMyRules();
+      const target = rules.find(x => x.id === editId);
+      if (target) {
+        if (!target.exceptions) target.exceptions = [];
+        if (!target.exceptions.includes(targetDateStr)) {
+          target.exceptions.push(targetDateStr);
+        }
+        saveMyRules(rules);
+      }
+      renderHistoryList();
+      renderCalendar();
+      closeModal('scheduleModal');
+    }
+
+    function deleteAllWeekly() {
+      const editId = document.getElementById('editRuleId').value;
+      if (!editId) return;
+      if (!confirm('毎週の繰り返し予定をすべて削除しますか？')) return;
+
+      const rules = getMyRules().filter(x => x.id !== editId);
+      saveMyRules(rules);
+      renderHistoryList();
+      renderCalendar();
+      closeModal('scheduleModal');
+    }
+
+    function getAvailableRanges(dateStr, includeAlmost = false) {
+      const responses = getAllResponsesForDate(dateStr);
+      const schedDur = getScheduleDuration();
+      const dayStart = START_HOUR * 60;
+      const dayEnd = END_HOUR * 60;
+      const rawRanges = [];
+      let currentBlock = null;
+
+      for (let m = dayStart; m < dayEnd; m++) {
+        const ngPeople = [];
+        let hasMaybe = false;
+
+        responses.forEach(person => {
+          const tMin = person.travelMin || 0;
+          let personNg = false;
+          let personMaybe = false;
+
+          person.items.forEach(it => {
+            const effStart = it.start - tMin;
+            const effEnd = it.end + tMin;
+            if (m >= effStart && m < effEnd) {
+              if (it.type === 'maybe') personMaybe = true;
+              else personNg = true;
+            }
+          });
+
+          if (personNg) {
+            ngPeople.push(person.name);
+          } else if (personMaybe) {
+            hasMaybe = true;
+          }
+        });
+
+        let status = null;
+        let missingPerson = '';
+
+        if (ngPeople.length === 0) {
+          status = hasMaybe ? 'has_maybe' : 'all_ok';
+        } else if (includeAlmost && ngPeople.length === 1) {
+          status = 'almost_one';
+          missingPerson = ngPeople[0];
+        }
+
+        if (status) {
+          if (currentBlock && currentBlock.status === status && currentBlock.missingPerson === missingPerson) {
+            currentBlock.end = m + 1;
+          } else {
+            if (currentBlock) rawRanges.push(currentBlock);
+            currentBlock = { start: m, end: m + 1, status, missingPerson };
+          }
+        } else {
+          if (currentBlock) {
+            rawRanges.push(currentBlock);
+            currentBlock = null;
+          }
+        }
+      }
+      if (currentBlock) rawRanges.push(currentBlock);
+
+      return rawRanges.filter(r => (r.end - r.start) >= schedDur);
+    }
+
+    function renderMonthCandidates(visibleDays) {
+      const firstDate = new Date(visibleDays[0].dateStr + 'T00:00:00');
+      const targetYear = firstDate.getFullYear();
+      const targetMonth = firstDate.getMonth();
+
+      document.getElementById('monthCandidateLabel').textContent = `${targetMonth + 1}月の候補（×・△なし）`;
+      document.getElementById('btnResetWeek').style.display = (weekOffset !== 0) ? 'inline-block' : 'none';
+
+      const d = new Date(targetYear, targetMonth, 1);
+      const perfectSlots = [];
+
+      while (d.getMonth() === targetMonth) {
+        const dow = d.getDay();
+        if (dow === 0 || dow === 6) {
+          const dStr = toDateStr(d);
+          const ranges = getAvailableRanges(dStr, false).filter(r => r.status === 'all_ok');
+          ranges.forEach(r => {
+            perfectSlots.push({
+              dateStr: dStr,
+              label: `${formatDayLabel(dStr)} ${minToTime(r.start)}〜${minToTime(r.end)}`
+            });
+          });
+        }
+        d.setDate(d.getDate() + 1);
+      }
+
+      const listEl = document.getElementById('monthCandidateList');
+      if (perfectSlots.length === 0) {
+        listEl.innerHTML = `<span class="cand-empty">条件を満たす×・△なしの候補はありません</span>`;
+      } else {
+        listEl.innerHTML = perfectSlots.map(slot =>
+          `<button type="button" class="cand-chip" onclick="openDetailModal('${slot.dateStr}')">${slot.label}</button>`
+        ).join('');
+      }
+    }
+
+    function renderCalendar() {
+      const visibleDays = getVisibleWeekendDays();
+      const sampleResponses = getAllResponsesForDate(visibleDays[0].dateStr);
+      const myTravel = getMyTravelMin();
+      const schedDur = getScheduleDuration();
+
+      renderMonthCandidates(visibleDays);
+
+      const header = document.getElementById('calHeader');
+      header.innerHTML = '<div class="time-gutter-head"></div>' + visibleDays.map(d => `
+        <div class="day-head">${d.label}</div>
+      `).join('');
+
+      const gutter = document.getElementById('timeGutter');
+      let gutterHtml = '';
+      for (let h = START_HOUR; h < END_HOUR; h++) {
+        gutterHtml += `<div class="time-label" style="height:${hourHeight}px;"><span>${h}:00</span></div>`;
+      }
+      gutter.innerHTML = gutterHtml;
+
+      const grid = document.getElementById('daysGrid');
+      const pxPerMin = hourHeight / 60;
+
+      grid.innerHTML = visibleDays.map(dayObj => {
+        const dStr = dayObj.dateStr;
+        let cellsHtml = '';
+        for (let h = START_HOUR; h < END_HOUR; h++) {
+          const halfLine = hourHeight >= 52 ? '<div class="half-line"></div>' : '';
+          cellsHtml += `<div class="hour-cell" style="height:${hourHeight}px;">${halfLine}</div>`;
+        }
+
+        const myDayItems = getMyItemsForDate(dStr);
+        const myNgsHtml = myDayItems.map(it => {
+          let html = '';
+
+          if (myTravel > 0) {
+            const preTop = (Math.max(it.start - myTravel, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            const preBot = (Math.min(it.start, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            if (preBot > preTop) {
+              html += `<div class="my-travel-block" style="top:${preTop}px; height:${preBot - preTop}px;">移動</div>`;
+            }
+
+            const postTop = (Math.max(it.end, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            const postBot = (Math.min(it.end + myTravel, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            if (postBot > postTop) {
+              html += `<div class="my-travel-block" style="top:${postTop}px; height:${postBot - postTop}px;">移動</div>`;
+            }
+          }
+
+          const top = (Math.max(it.start, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+          const bottom = (Math.min(it.end, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+          const height = Math.max(0, bottom - top);
+          if (height > 0) {
+            const tag = it.type === 'maybe' ? '自分△' : '自分×';
+            html += `<div class="my-ng-block" style="top:${top}px; height:${height}px;">${tag}</div>`;
+          }
+          return html;
+        }).join('');
+
+        const ranges = getAvailableRanges(dStr, showAlmostOne);
+        const freeHtml = ranges.map(range => {
+          const top = (range.start - START_HOUR * 60) * pxPerMin;
+          const height = (range.end - range.start) * pxPerMin;
+
+          let cls = 'free-block';
+          let prefix = '';
+          if (range.status === 'has_maybe') {
+            cls = 'free-block maybe';
+            prefix = '△ ';
+          } else if (range.status === 'almost_one') {
+            cls = 'free-block almost';
+            prefix = `あと1人(${range.missingPerson}) `;
+          }
+
+          const label = height >= 24 ? `${prefix}${minToTime(range.start)}〜${minToTime(range.end)}` : '';
+          return `<div class="${cls}" style="top:${top + 1}px; height:${Math.max(2, height - 2)}px;">${label}</div>`;
+        }).join('');
+
+        return `<div class="day-col" onclick="openDetailModal('${dStr}')">${cellsHtml}${myNgsHtml}${freeHtml}</div>`;
+      }).join('');
+
+      if (sampleResponses.length === 0) {
+        document.getElementById('memberCountText').textContent = '参加メンバー：0人（「設定」から名前を登録）';
+      } else {
+        document.getElementById('memberCountText').textContent =
+          `反映済み（${sampleResponses.length}人）：${sampleResponses.map(r => r.name).join('・')}`;
+      }
+      document.getElementById('filterSummaryText').textContent =
+        `スケジュールの長さ：${formatDurationLabel(schedDur)}` + (myTravel > 0 ? ` / 移動${formatDurationLabel(myTravel)}` : '');
+    }
+
+    function copySlotText(dateStr, startMin, endMin, noteText) {
+      const responses = getAllResponsesForDate(dateStr);
+      const schedDur = getScheduleDuration();
+      const memberNames = responses.map(r => r.name).join('・');
+      const dayLabel = formatDayLabel(dateStr);
+      const timeRange = `${minToTime(startMin)}〜${minToTime(endMin)}`;
+
+      const text = `【日程決定】${dayLabel} ${timeRange}（スケジュールの長さ：${formatDurationLabel(schedDur)}）${noteText ? `\n※${noteText}` : ''}\n参加メンバー：${memberNames}`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert(`以下の内容をコピーしました！LINE等に貼り付けられます。\n\n${text}`);
+      }).catch(() => {
+        prompt('以下のテキストをコピーしてください：', text);
+      });
+    }
+
+    function openDetailModal(dateStr) {
+      const responses = getAllResponsesForDate(dateStr);
+      const schedDur = getScheduleDuration();
+      const durLabel = formatDurationLabel(schedDur);
+
+      document.getElementById('detailModalTitle').textContent = `${formatDayLabel(dateStr)} の空き状況`;
+      document.getElementById('detailFreeLabel').textContent = `開催可能な時間帯（スケジュールの長さ：${durLabel}）`;
+
+      const ranges = getAvailableRanges(dateStr, showAlmostOne);
+      const freeListEl = document.getElementById('detailFreeList');
+      if (ranges.length === 0) {
+        freeListEl.innerHTML = `<li class="detail-row" style="color: var(--text-sub);">条件を満たす時間帯はありません</li>`;
+      } else {
+        freeListEl.innerHTML = ranges.map(r => {
+          const rangeLen = r.end - r.start;
+          const fitNote = rangeLen > schedDur ? `この中で${durLabel}開催できます` : `${durLabel}ピッタリ開催できます`;
+
+          if (r.status === 'all_ok') {
+            return `
+              <li class="detail-row free">
+                <div class="detail-row-text">
+                  <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（全員OK）
+                  <span class="detail-sub-note">${fitNote}</span>
+                </div>
+                <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '')">コピー</button>
+              </li>`;
+          } else if (r.status === 'has_maybe') {
+            return `
+              <li class="detail-row maybe">
+                <div class="detail-row-text">
+                  <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（△あり・要相談）
+                  <span class="detail-sub-note">${fitNote}</span>
+                </div>
+                <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '△のメンバーと要調整')">コピー</button>
+              </li>`;
+          } else {
+            return `
+              <li class="detail-row almost">
+                <div class="detail-row-text">
+                  <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（<b>${r.missingPerson}</b>が調整できれば開催可）
+                  <span class="detail-sub-note">${fitNote}</span>
+                </div>
+                <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '${r.missingPerson}さんと要調整')">コピー</button>
+              </li>`;
+          }
+        }).join('');
+      }
+
+      const busyListEl = document.getElementById('detailBusyList');
+      if (responses.length === 0) {
+        busyListEl.innerHTML = `<li class="detail-row"><div class="detail-row-text" style="color:var(--text-sub);">まだメンバーが登録されていません</div></li>`;
+      } else {
+        busyListEl.innerHTML = responses.map(person => {
+          const tStr = person.travelMin > 0 ? ` [片道${formatDurationLabel(person.travelMin)}]` : '';
+          const text = person.items.length === 0
+            ? '終日OK'
+            : person.items.map(it => {
+                const mark = it.type === 'maybe' ? '△' : '×';
+                const memoStr = it.memo ? `(${it.memo})` : '';
+                return `${mark} ${minToTime(it.start)}〜${minToTime(it.end)}${memoStr}`;
+              }).join(' / ');
+          return `<li class="detail-row"><div class="detail-row-text"><b>${person.name}</b><span style="font-size:0.75rem; color:var(--text-sub);">${tStr}</span>：${text}</div></li>`;
+        }).join('');
+      }
+
+      document.getElementById('detailModal').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function changeZoom(delta) {
+      hourHeight = Math.min(96, Math.max(26, hourHeight + delta));
+      renderCalendar();
+    }
+
+    const calWrapper = document.getElementById('calendarWrapper');
+    let initialPinchDist = null;
+    let initialHeight = hourHeight;
+
+    calWrapper.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        initialHeight = hourHeight;
+      }
+    }, { passive: true });
+
+    calWrapper.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && initialPinchDist) {
+        e.preventDefault();
+        const currentDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const scale = currentDist / initialPinchDist;
+        hourHeight = Math.min(96, Math.max(26, Math.round(initialHeight * scale)));
+        renderCalendar();
+      }
+    }, { passive: false });
+
+    calWrapper.addEventListener('touchend', () => {
+      initialPinchDist = null;
+    });
+  </script>
+</body>
+</html>
