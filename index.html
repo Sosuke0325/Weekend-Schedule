@@ -41,6 +41,7 @@
       --almost-bg: rgba(148, 163, 184, 0.1);
       --almost-border: #94a3b8;
       --ok-green: #10b981;
+      --star-color: #d97706;
     }
 
     /* 端末設定に合わせたダークモード */
@@ -69,6 +70,7 @@
         --almost-bg: rgba(148, 163, 184, 0.08);
         --almost-border: #64748b;
         --ok-green: #34d399;
+        --star-color: #fbbf24;
       }
     }
 
@@ -101,7 +103,9 @@
     .cand-chip,
     .toggle-pill,
     .btn-today-mini,
-    .btn-copy-mini {
+    .btn-copy-mini,
+    .pref-chip,
+    .pref-day-label {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "HiraginoSans-W6", "Hiragino Sans W6", sans-serif;
       font-weight: 600;
     }
@@ -195,9 +199,17 @@
       white-space: nowrap;
       cursor: pointer;
       flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
     .cand-chip:active {
       opacity: 0.75;
+    }
+
+    .cand-star {
+      color: var(--star-color);
+      font-size: 0.73rem;
     }
 
     .cand-empty {
@@ -554,6 +566,59 @@
       margin-bottom: 4px;
     }
 
+    /* 曜日別・複数選択できる優先時間帯チップ */
+    .pref-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pref-day-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pref-day-label {
+      width: 54px;
+      font-size: 0.86rem;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .pref-chips-wrap {
+      display: flex;
+      flex: 1;
+      gap: 6px;
+    }
+
+    .pref-chip {
+      flex: 1;
+      padding: 8px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text-sub);
+      font-size: 0.78rem;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+      transition: 0.15s;
+      line-height: 1.25;
+    }
+    .pref-chip span {
+      display: block;
+      font-size: 0.68rem;
+      font-weight: normal;
+      opacity: 0.85;
+      margin-top: 1px;
+    }
+    .pref-chip.active {
+      background: var(--accent);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
     .name-input-row input[type="text"],
     .setting-select {
       width: 100%;
@@ -834,6 +899,12 @@
       opacity: 0.85;
       margin-top: 2px;
     }
+    .detail-pref-note {
+      display: block;
+      font-size: 0.74rem;
+      color: var(--star-color);
+      margin-top: 2px;
+    }
 
     .btn-copy-mini {
       background: var(--primary);
@@ -980,29 +1051,28 @@
         </div>
       </div>
 
-      <!-- あなたの優先時間帯（各自の端末で設定・候補の並び順に反映） -->
+      <!-- あなたの優先時間帯（曜日別・複数選択・全員合算で提案） -->
       <div class="section-card">
         <div class="card-title">あなたの優先時間帯</div>
         <p class="card-desc">
-          上部バーの「今月の候補」で、ここで選んだ曜日や時間帯が上位（左側）に表示されるようになります。（自分の端末のみに反映）
+          集まりやすい曜日・時間帯を複数タップして選んでください。メンバー全員の希望と照らし合わせ、希望が重なる候補から上位に提案されます。
         </p>
-        <div class="setting-row-2col">
-          <div class="setting-col">
-            <span class="setting-sublabel">優先する曜日</span>
-            <select id="prefDaySelect" class="setting-select" onchange="saveSettings()">
-              <option value="none" selected>指定なし（日付順）</option>
-              <option value="6">土曜日を優先</option>
-              <option value="0">日曜日を優先</option>
-            </select>
+        <div class="pref-grid">
+          <div class="pref-day-row">
+            <div class="pref-day-label">土曜日</div>
+            <div class="pref-chips-wrap">
+              <div class="pref-chip" id="pref_sat_morning" onclick="togglePrefSlot('sat', 'morning')">午前<span>〜12:00</span></div>
+              <div class="pref-chip" id="pref_sat_afternoon" onclick="togglePrefSlot('sat', 'afternoon')">午後<span>12:00〜18:00</span></div>
+              <div class="pref-chip" id="pref_sat_night" onclick="togglePrefSlot('sat', 'night')">夜<span>18:00〜</span></div>
+            </div>
           </div>
-          <div class="setting-col">
-            <span class="setting-sublabel">優先する時間帯</span>
-            <select id="prefSlotSelect" class="setting-select" onchange="saveSettings()">
-              <option value="none" selected>指定なし</option>
-              <option value="morning">午前中（〜12:00）</option>
-              <option value="afternoon">午後（12:00〜18:00）</option>
-              <option value="night">夜（18:00〜）</option>
-            </select>
+          <div class="pref-day-row">
+            <div class="pref-day-label">日曜日</div>
+            <div class="pref-chips-wrap">
+              <div class="pref-chip" id="pref_sun_morning" onclick="togglePrefSlot('sun', 'morning')">午前<span>〜12:00</span></div>
+              <div class="pref-chip" id="pref_sun_afternoon" onclick="togglePrefSlot('sun', 'afternoon')">午後<span>12:00〜18:00</span></div>
+              <div class="pref-chip" id="pref_sun_night" onclick="togglePrefSlot('sun', 'night')">夜<span>18:00〜</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1228,6 +1298,7 @@
     let selectedRepeat = 'none';
 
     const RULES_STORAGE_KEY = 'scheduleMyRules_v1';
+    const PREFS_STORAGE_KEY = 'scheduleMyPrefs_v1';
     const ONE_MONTH_MS = 31 * 24 * 60 * 60 * 1000;
 
     function getCalStartHour() {
@@ -1238,12 +1309,44 @@
       return Number(localStorage.getItem('scheduleCalEndHour') || '22');
     }
 
-    function getPrefDay() {
-      return localStorage.getItem('schedulePrefDay') || 'none';
+    /* 自分の優先時間帯（曜日別・複数選択）を取得 { sat: ['night'], sun: ['afternoon', 'night'] } */
+    function getMyPrefs() {
+      try {
+        const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+        if (!raw) return { sat: [], sun: [] };
+        const parsed = JSON.parse(raw);
+        return {
+          sat: Array.isArray(parsed.sat) ? parsed.sat : [],
+          sun: Array.isArray(parsed.sun) ? parsed.sun : []
+        };
+      } catch (e) {
+        return { sat: [], sun: [] };
+      }
     }
 
-    function getPrefSlot() {
-      return localStorage.getItem('schedulePrefSlot') || 'none';
+    function renderPrefChips() {
+      const prefs = getMyPrefs();
+      ['morning', 'afternoon', 'night'].forEach(slot => {
+        const satEl = document.getElementById(`pref_sat_${slot}`);
+        const sunEl = document.getElementById(`pref_sun_${slot}`);
+        if (satEl) satEl.classList.toggle('active', prefs.sat.includes(slot));
+        if (sunEl) sunEl.classList.toggle('active', prefs.sun.includes(slot));
+      });
+    }
+
+    function togglePrefSlot(dayKey, slotKey) {
+      const prefs = getMyPrefs();
+      const arr = prefs[dayKey];
+      const idx = arr.indexOf(slotKey);
+      if (idx === -1) {
+        arr.push(slotKey);
+      } else {
+        arr.splice(idx, 1);
+      }
+      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+      renderPrefChips();
+      syncMyDataToCloud();
+      renderCalendar();
     }
 
     function toDateStr(d) {
@@ -1327,12 +1430,15 @@
       syncMyDataToCloud();
     }
 
+    /* 自分のデータ（名前・移動時間・予定・優先時間帯）を Firestore へ同期 */
     function syncMyDataToCloud() {
       const myName = document.getElementById('userNameInput').value.trim();
       const myRules = getMyRules();
       const myTravel = getMyTravelMin();
+      const myPrefs = getMyPrefs();
+      const hasAnyPref = myPrefs.sat.length > 0 || myPrefs.sun.length > 0;
 
-      if (!myName && myRules.length === 0) return;
+      if (!myName && myRules.length === 0 && !hasAnyPref) return;
 
       const dot = document.getElementById('syncDot');
       if (dot) dot.classList.add('connecting');
@@ -1341,6 +1447,7 @@
         name: myName || '名無し',
         travelMin: myTravel,
         rules: myRules,
+        prefs: myPrefs,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
         if (dot) dot.classList.remove('connecting');
@@ -1443,12 +1550,15 @@
       const myName = document.getElementById('userNameInput').value.trim();
       const myTravel = getMyTravelMin();
       const myRules = getMyRules();
+      const myPrefs = getMyPrefs();
+      const hasAnyPref = myPrefs.sat.length > 0 || myPrefs.sun.length > 0;
 
-      if (myName || myRules.length > 0) {
+      if (myName || myRules.length > 0 || hasAnyPref) {
         combined.push({
           uid: MY_USER_ID,
           name: myName || 'あなた',
           travelMin: myTravel,
+          prefs: myPrefs,
           items: expandRulesForDate(myRules, dateStr)
         });
       }
@@ -1456,10 +1566,15 @@
       Object.keys(roomMembersData).forEach(uid => {
         if (uid === MY_USER_ID) return;
         const member = roomMembersData[uid];
+        const mPrefs = member.prefs || { sat: [], sun: [] };
         combined.push({
           uid,
           name: member.name || 'メンバー',
           travelMin: member.travelMin || 0,
+          prefs: {
+            sat: Array.isArray(mPrefs.sat) ? mPrefs.sat : [],
+            sun: Array.isArray(mPrefs.sun) ? mPrefs.sun : []
+          },
           items: expandRulesForDate(member.rules || [], dateStr)
         });
       });
@@ -1503,9 +1618,8 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       initCalHourSelects();
+      renderPrefChips();
       document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
-      document.getElementById('prefDaySelect').value = getPrefDay();
-      document.getElementById('prefSlotSelect').value = getPrefSlot();
       document.getElementById('minDurationSelect').value = String(getScheduleDuration());
       document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
       document.getElementById('roomIdInput').value = currentRoomId;
@@ -1574,14 +1688,10 @@
 
     function saveSettings(showAlert = false) {
       const name = document.getElementById('userNameInput').value.trim();
-      const prefDay = document.getElementById('prefDaySelect').value;
-      const prefSlot = document.getElementById('prefSlotSelect').value;
       const minDur = document.getElementById('minDurationSelect').value;
       const travel = document.getElementById('travelTimeSelect').value;
 
       localStorage.setItem('scheduleUserName', name);
-      localStorage.setItem('schedulePrefDay', prefDay);
-      localStorage.setItem('schedulePrefSlot', prefSlot);
       localStorage.setItem('scheduleMinDuration', minDur);
       localStorage.setItem('scheduleTravelMin', travel);
 
@@ -1875,45 +1985,49 @@
       return rawRanges.filter(r => (r.end - r.start) >= schedDur);
     }
 
-    /* 各自の「あなたの優先時間帯」に基づいて候補の優先度スコアを計算 */
-    function calcCandidatePriority(dateStr, startMin, endMin) {
-      const prefDay = getPrefDay();
-      const prefSlot = getPrefSlot();
+    /* 全メンバーの優先時間帯を合算し、この枠を希望しているメンバー一覧とスコアを計算 */
+    function evaluateGroupPreference(dateStr, startMin, endMin) {
+      const dow = getDayOfWeek(dateStr);
+      const dayKey = (dow === 6) ? 'sat' : (dow === 0 ? 'sun' : null);
+      if (!dayKey) return { matchedNames: [], score: 0 };
+
+      const responses = getAllResponsesForDate(dateStr);
       const schedDur = getScheduleDuration();
-      let score = 0;
+      const slotRanges = {
+        morning: [0, 12 * 60],
+        afternoon: [12 * 60, 18 * 60],
+        night: [18 * 60, 24 * 60]
+      };
 
-      // 1. 優先曜日チェック（一致で +20点）
-      if (prefDay !== 'none' && String(getDayOfWeek(dateStr)) === prefDay) {
-        score += 20;
-      }
+      const matchedNames = [];
+      let totalScore = 0;
 
-      // 2. 優先時間帯チェック（その時間帯内にスケジュールの長さ分を確保できるなら +10点、一部重なるなら +5点）
-      if (prefSlot !== 'none') {
-        let slotStart = 0;
-        let slotEnd = 24 * 60;
-        if (prefSlot === 'morning') {
-          slotStart = 0;
-          slotEnd = 12 * 60;
-        } else if (prefSlot === 'afternoon') {
-          slotStart = 12 * 60;
-          slotEnd = 18 * 60;
-        } else if (prefSlot === 'night') {
-          slotStart = 18 * 60;
-          slotEnd = 24 * 60;
+      responses.forEach(person => {
+        const daySlots = (person.prefs && person.prefs[dayKey]) || [];
+        if (daySlots.length === 0) return;
+
+        let bestPersonScore = 0;
+        daySlots.forEach(slotKey => {
+          const range = slotRanges[slotKey];
+          if (!range) return;
+          const overlapStart = Math.max(startMin, range[0]);
+          const overlapEnd = Math.min(endMin, range[1]);
+          const overlapDur = overlapEnd - overlapStart;
+
+          if (overlapDur >= schedDur) {
+            bestPersonScore = Math.max(bestPersonScore, 2);
+          } else if (overlapDur > 0) {
+            bestPersonScore = Math.max(bestPersonScore, 1);
+          }
+        });
+
+        if (bestPersonScore > 0) {
+          matchedNames.push(person.name);
+          totalScore += bestPersonScore;
         }
+      });
 
-        const overlapStart = Math.max(startMin, slotStart);
-        const overlapEnd = Math.min(endMin, slotEnd);
-        const overlapDur = overlapEnd - overlapStart;
-
-        if (overlapDur >= schedDur) {
-          score += 10;
-        } else if (overlapDur > 0) {
-          score += 5;
-        }
-      }
-
-      return score;
+      return { matchedNames, score: totalScore };
     }
 
     function renderMonthCandidates(visibleDays) {
@@ -1933,11 +2047,13 @@
           const dStr = toDateStr(d);
           const ranges = getAvailableRanges(dStr, false).filter(r => r.status === 'all_ok');
           ranges.forEach(r => {
+            const prefEval = evaluateGroupPreference(dStr, r.start, r.end);
             perfectSlots.push({
               dateStr: dStr,
               start: r.start,
               end: r.end,
-              priority: calcCandidatePriority(dStr, r.start, r.end),
+              matchCount: prefEval.matchedNames.length,
+              score: prefEval.score,
               label: `${formatDayLabel(dStr)} ${minToTime(r.start)}〜${minToTime(r.end)}`
             });
           });
@@ -1945,9 +2061,10 @@
         d.setDate(d.getDate() + 1);
       }
 
-      // 優先度が高い順に並べ替え（同点なら日付・時間が早い順）
+      // 希望人数・スコアが高い順に並べ替え（同点なら日付・時間が早い順）
       perfectSlots.sort((a, b) => {
-        if (b.priority !== a.priority) return b.priority - a.priority;
+        if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
+        if (b.score !== a.score) return b.score - a.score;
         return a.dateStr.localeCompare(b.dateStr) || a.start - b.start;
       });
 
@@ -1955,9 +2072,10 @@
       if (perfectSlots.length === 0) {
         listEl.innerHTML = `<span class="cand-empty">条件を満たす×・△なしの候補はありません</span>`;
       } else {
-        listEl.innerHTML = perfectSlots.map(slot =>
-          `<button type="button" class="cand-chip" onclick="openDetailModal('${slot.dateStr}')">${slot.label}</button>`
-        ).join('');
+        listEl.innerHTML = perfectSlots.map(slot => {
+          const starBadge = slot.matchCount > 0 ? `<span class="cand-star">★${slot.matchCount}人希望</span>` : '';
+          return `<button type="button" class="cand-chip" onclick="openDetailModal('${slot.dateStr}')">${slot.label}${starBadge}</button>`;
+        }).join('');
       }
     }
 
@@ -2086,6 +2204,10 @@
         freeListEl.innerHTML = ranges.map(r => {
           const rangeLen = r.end - r.start;
           const fitNote = rangeLen > schedDur ? `この中で${durLabel}開催できます` : `${durLabel}ピッタリ開催できます`;
+          const prefEval = evaluateGroupPreference(dateStr, r.start, r.end);
+          const prefNote = prefEval.matchedNames.length > 0
+            ? `<span class="detail-pref-note">★ 優先希望：${prefEval.matchedNames.join('・')}</span>`
+            : '';
 
           if (r.status === 'all_ok') {
             return `
@@ -2093,6 +2215,7 @@
                 <div class="detail-row-text">
                   <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（全員OK）
                   <span class="detail-sub-note">${fitNote}</span>
+                  ${prefNote}
                 </div>
                 <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '')">コピー</button>
               </li>`;
@@ -2102,6 +2225,7 @@
                 <div class="detail-row-text">
                   <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（△あり・要相談）
                   <span class="detail-sub-note">${fitNote}</span>
+                  ${prefNote}
                 </div>
                 <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '△のメンバーと要調整')">コピー</button>
               </li>`;
@@ -2111,6 +2235,7 @@
                 <div class="detail-row-text">
                   <b>${minToTime(r.start)} 〜 ${minToTime(r.end)}</b>（<b>${r.missingPerson}</b>が調整できれば開催可）
                   <span class="detail-sub-note">${fitNote}</span>
+                  ${prefNote}
                 </div>
                 <button type="button" class="btn-copy-mini" onclick="copySlotText('${dateStr}', ${r.start}, ${r.end}, '${r.missingPerson}さんと要調整')">コピー</button>
               </li>`;
