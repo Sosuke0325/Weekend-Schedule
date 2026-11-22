@@ -105,7 +105,8 @@
     .btn-today-mini,
     .btn-copy-mini,
     .pref-chip,
-    .pref-day-label {
+    .pref-day-label,
+    .room-chip {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "HiraginoSans-W6", "Hiragino Sans W6", sans-serif;
       font-weight: 600;
     }
@@ -534,6 +535,18 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
+    }
+
+    .room-tag-pill {
+      font-size: 0.72rem;
+      font-weight: normal;
+      background: var(--accent);
+      color: var(--primary);
+      border: 1px solid var(--accent-border);
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
     }
 
     .card-desc {
@@ -617,6 +630,50 @@
       background: var(--accent);
       border-color: var(--primary);
       color: var(--primary);
+    }
+
+    /* 参加済みルーム履歴チップ */
+    .room-history-wrap {
+      margin-bottom: 12px;
+    }
+    .room-history-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .room-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      border-radius: 99px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .room-chip.active {
+      background: var(--accent);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .room-chip-del {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      opacity: 0.7;
+    }
+    .room-chip-del:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+      opacity: 1;
     }
 
     .name-input-row input[type="text"],
@@ -1019,9 +1076,12 @@
       
       <!-- 予定（× / △）追加ボタン -->
       <div class="section-card">
-        <div class="card-title">予定の登録</div>
+        <div class="card-title">
+          <span>予定の登録</span>
+          <span class="room-tag-pill" id="inputRoomBadge">ルーム：default-group</span>
+        </div>
         <p class="card-desc">
-          都合が悪い時間（×）や、できれば避けたい時間（△）を登録してください。設定した移動時間も自動で前後から差し引かれ、グループ全員にリアルタイム共有されます。
+          このルーム専用の都合が悪い時間（×）や、できれば避けたい時間（△）を登録してください。他のルームとは別に保存されます。
         </p>
         <button type="button" class="btn btn-primary" style="width: 100%;" onclick="openScheduleModal()">＋ 時間帯を追加する</button>
       </div>
@@ -1051,11 +1111,34 @@
         </div>
       </div>
 
-      <!-- あなたの優先時間帯（曜日別・複数選択・全員合算で提案） -->
+      <!-- グループ共有設定（ルーム合言葉・履歴・招待URLコピー） -->
+      <div class="section-card">
+        <div class="card-title">
+          <span>グループ共有（ルーム合言葉）</span>
+          <span class="room-tag-pill" id="settingsRoomBadge">現在：default-group</span>
+        </div>
+        <p class="card-desc">
+          ルームごとに予定と優先時間帯を分けて保存できます。一度入ったルームは下の履歴からいつでも戻れます。
+        </p>
+
+        <!-- 参加済みルーム履歴 -->
+        <div class="room-history-wrap" id="roomHistoryWrap">
+          <span class="setting-sublabel">参加したルーム履歴（タップで切替）</span>
+          <div class="room-history-list" id="roomHistoryList"></div>
+        </div>
+
+        <div class="name-input-row" style="margin-bottom: 10px;">
+          <input type="text" id="roomIdInput" placeholder="新しい合言葉を入力（例：weekend-group）">
+          <button type="button" class="btn btn-secondary" style="flex: 0 0 auto; padding: 10px 14px;" onclick="changeRoom()">切替</button>
+        </div>
+        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="copyInviteLink()">友達に送る招待URLをコピー</button>
+      </div>
+
+      <!-- あなたの優先時間帯（ルーム別・曜日別・複数選択・全員合算で提案） -->
       <div class="section-card">
         <div class="card-title">あなたの優先時間帯</div>
         <p class="card-desc">
-          集まりやすい曜日・時間帯を複数タップして選んでください。メンバー全員の希望と照らし合わせ、希望が重なる候補から上位に提案されます。
+          このルームで集まりやすい曜日・時間帯を複数タップして選んでください。メンバー全員の希望と照らし合わせ、希望が重なる候補から上位に提案されます。
         </p>
         <div class="pref-grid">
           <div class="pref-day-row">
@@ -1129,19 +1212,6 @@
           <option value="80">片道 1時間20分</option>
           <option value="90">片道 1時間30分</option>
         </select>
-      </div>
-
-      <!-- グループ共有設定（ルーム合言葉 & 招待URLコピー） -->
-      <div class="section-card">
-        <div class="card-title">グループ共有（ルーム合言葉）</div>
-        <p class="card-desc">
-          同じ合言葉を入力しているメンバー同士で予定がリアルタイム同期されます。招待リンクを送ると合言葉も自動で引き継がれます。
-        </p>
-        <div class="name-input-row" style="margin-bottom: 10px;">
-          <input type="text" id="roomIdInput" placeholder="例：weekend-group">
-          <button type="button" class="btn btn-secondary" style="flex: 0 0 auto; padding: 10px 14px;" onclick="changeRoom()">切替</button>
-        </div>
-        <button type="button" class="btn btn-primary" style="width: 100%;" onclick="copyInviteLink()">友達に送る招待URLをコピー</button>
       </div>
 
     </div>
@@ -1264,7 +1334,7 @@
     const db = firebase.firestore();
 
     // ==========================================
-    // ユーザーID & ルーム（合言葉）管理
+    // ユーザーID & ルーム（合言葉）・履歴管理
     // ==========================================
     function getOrCreateUserId() {
       let uid = localStorage.getItem('scheduleUserId_v1');
@@ -1275,6 +1345,39 @@
       return uid;
     }
     const MY_USER_ID = getOrCreateUserId();
+
+    const ROOM_HISTORY_KEY = 'scheduleRoomHistory_v1';
+
+    function getRoomHistory() {
+      try {
+        const raw = localStorage.getItem(ROOM_HISTORY_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function addRoomToHistory(roomId) {
+      if (!roomId) return;
+      let hist = getRoomHistory().filter(r => r !== roomId);
+      hist.unshift(roomId);
+      if (hist.length > 15) hist = hist.slice(0, 15);
+      localStorage.setItem(ROOM_HISTORY_KEY, JSON.stringify(hist));
+      renderRoomHistory();
+    }
+
+    function removeRoomFromHistory(event, roomId) {
+      event.stopPropagation();
+      if (roomId === currentRoomId) {
+        alert('現在開いているルームは履歴から削除できません。別のルームに切り替えてから削除してください。');
+        return;
+      }
+      if (!confirm(`履歴から「${roomId}」を削除しますか？`)) return;
+      const hist = getRoomHistory().filter(r => r !== roomId);
+      localStorage.setItem(ROOM_HISTORY_KEY, JSON.stringify(hist));
+      renderRoomHistory();
+    }
 
     function getInitialRoomId() {
       const params = new URLSearchParams(window.location.search);
@@ -1288,6 +1391,27 @@
     }
     let currentRoomId = getInitialRoomId();
 
+    /* ルームごとに保存キーを独立させる */
+    function getRulesStorageKey(roomId = currentRoomId) {
+      return `scheduleMyRules_room_${roomId}`;
+    }
+
+    function getPrefsStorageKey(roomId = currentRoomId) {
+      return `scheduleMyPrefs_room_${roomId}`;
+    }
+
+    /* 以前のバージョン（共通保存）からの初回データ移行（default-group用） */
+    function migrateLegacyDataIfNeeded() {
+      const oldRules = localStorage.getItem('scheduleMyRules_v1');
+      if (oldRules && !localStorage.getItem(getRulesStorageKey('default-group'))) {
+        localStorage.setItem(getRulesStorageKey('default-group'), oldRules);
+      }
+      const oldPrefs = localStorage.getItem('scheduleMyPrefs_v1');
+      if (oldPrefs && !localStorage.getItem(getPrefsStorageKey('default-group'))) {
+        localStorage.setItem(getPrefsStorageKey('default-group'), oldPrefs);
+      }
+    }
+
     let roomMembersData = {};
     let unsubscribeRoom = null;
 
@@ -1297,8 +1421,6 @@
     let selectedType = 'ng';
     let selectedRepeat = 'none';
 
-    const RULES_STORAGE_KEY = 'scheduleMyRules_v1';
-    const PREFS_STORAGE_KEY = 'scheduleMyPrefs_v1';
     const ONE_MONTH_MS = 31 * 24 * 60 * 60 * 1000;
 
     function getCalStartHour() {
@@ -1309,10 +1431,10 @@
       return Number(localStorage.getItem('scheduleCalEndHour') || '22');
     }
 
-    /* 自分の優先時間帯（曜日別・複数選択）を取得 { sat: ['night'], sun: ['afternoon', 'night'] } */
+    /* 現在のルーム専用の優先時間帯を取得 */
     function getMyPrefs() {
       try {
-        const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+        const raw = localStorage.getItem(getPrefsStorageKey());
         if (!raw) return { sat: [], sun: [] };
         const parsed = JSON.parse(raw);
         return {
@@ -1343,10 +1465,38 @@
       } else {
         arr.splice(idx, 1);
       }
-      localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+      localStorage.setItem(getPrefsStorageKey(), JSON.stringify(prefs));
       renderPrefChips();
       syncMyDataToCloud();
       renderCalendar();
+    }
+
+    function updateRoomBadges() {
+      const inBadge = document.getElementById('inputRoomBadge');
+      const setBadge = document.getElementById('settingsRoomBadge');
+      if (inBadge) inBadge.textContent = `ルーム：${currentRoomId}`;
+      if (setBadge) setBadge.textContent = `現在：${currentRoomId}`;
+      const roomInput = document.getElementById('roomIdInput');
+      if (roomInput) roomInput.value = currentRoomId;
+    }
+
+    function renderRoomHistory() {
+      const listEl = document.getElementById('roomHistoryList');
+      if (!listEl) return;
+      const hist = getRoomHistory();
+
+      listEl.innerHTML = hist.map(rId => {
+        const isCurrent = (rId === currentRoomId);
+        const delBtn = isCurrent
+          ? ''
+          : `<span class="room-chip-del" onclick="removeRoomFromHistory(event, '${rId.replace(/'/g, "\\'")}')" title="履歴から削除">×</span>`;
+        return `
+          <div class="room-chip ${isCurrent ? 'active' : ''}" onclick="switchToRoom('${rId.replace(/'/g, "\\'")}')">
+            <span>${rId}</span>
+            ${delBtn}
+          </div>
+        `;
+      }).join('');
     }
 
     function toDateStr(d) {
@@ -1413,24 +1563,26 @@
       return Number(localStorage.getItem('scheduleTravelMin') || '0');
     }
 
+    /* 現在のルーム専用の予定ルール一覧を取得 */
     function getMyRules() {
-      const raw = localStorage.getItem(RULES_STORAGE_KEY);
+      const key = getRulesStorageKey();
+      const raw = localStorage.getItem(key);
       if (!raw) return [];
       const list = JSON.parse(raw);
       const cutoff = Date.now() - ONE_MONTH_MS;
       const valid = list.filter(r => r.repeat === 'weekly' || (r.createdAt || Date.now()) >= cutoff);
       if (valid.length !== list.length) {
-        localStorage.setItem(RULES_STORAGE_KEY, JSON.stringify(valid));
+        localStorage.setItem(key, JSON.stringify(valid));
       }
       return valid;
     }
 
     function saveMyRules(list) {
-      localStorage.setItem(RULES_STORAGE_KEY, JSON.stringify(list));
+      localStorage.setItem(getRulesStorageKey(), JSON.stringify(list));
       syncMyDataToCloud();
     }
 
-    /* 自分のデータ（名前・移動時間・予定・優先時間帯）を Firestore へ同期 */
+    /* 自分のデータ（名前・移動時間・このルームの予定・このルームの優先時間帯）を Firestore へ同期 */
     function syncMyDataToCloud() {
       const myName = document.getElementById('userNameInput').value.trim();
       const myRules = getMyRules();
@@ -1617,12 +1769,15 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      migrateLegacyDataIfNeeded();
+      addRoomToHistory(currentRoomId);
+      updateRoomBadges();
+
       initCalHourSelects();
       renderPrefChips();
       document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
       document.getElementById('minDurationSelect').value = String(getScheduleDuration());
       document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
-      document.getElementById('roomIdInput').value = currentRoomId;
 
       renderCalendar();
       renderHistoryList();
@@ -1703,18 +1858,34 @@
       }
     }
 
-    function changeRoom() {
-      const newRoom = document.getElementById('roomIdInput').value.trim();
-      if (!newRoom) {
+    function switchToRoom(targetRoomId, showAlert = true) {
+      const clean = (targetRoomId || '').trim();
+      if (!clean) {
         alert('ルーム合言葉を入力してください。');
         return;
       }
-      currentRoomId = newRoom;
+      currentRoomId = clean;
       localStorage.setItem('scheduleRoomId_v1', currentRoomId);
+      addRoomToHistory(currentRoomId);
+      updateRoomBadges();
+
+      // このルーム専用の優先時間帯チップと履歴・カレンダーを再描画
+      renderPrefChips();
+      renderHistoryList();
+
       roomMembersData = {};
       subscribeToRoom(currentRoomId);
       syncMyDataToCloud();
-      alert(`ルーム「${currentRoomId}」に切り替えました！`);
+      renderCalendar();
+
+      if (showAlert) {
+        alert(`ルーム「${currentRoomId}」に切り替えました！`);
+      }
+    }
+
+    function changeRoom() {
+      const newRoom = document.getElementById('roomIdInput').value.trim();
+      switchToRoom(newRoom, true);
     }
 
     function copyInviteLink() {
@@ -1734,7 +1905,7 @@
       const history = getExpandedHistoryList();
 
       if (history.length === 0) {
-        listEl.innerHTML = `<li class="item-empty">過去1ヶ月の登録履歴はありません</li>`;
+        listEl.innerHTML = `<li class="item-empty">このルームの登録履歴はありません</li>`;
         return;
       }
 
@@ -1985,7 +2156,6 @@
       return rawRanges.filter(r => (r.end - r.start) >= schedDur);
     }
 
-    /* 全メンバーの優先時間帯を合算し、この枠を希望しているメンバー一覧とスコアを計算 */
     function evaluateGroupPreference(dateStr, startMin, endMin) {
       const dow = getDayOfWeek(dateStr);
       const dayKey = (dow === 6) ? 'sat' : (dow === 0 ? 'sun' : null);
@@ -2061,7 +2231,6 @@
         d.setDate(d.getDate() + 1);
       }
 
-      // 希望人数・スコアが高い順に並べ替え（同点なら日付・時間が早い順）
       perfectSlots.sort((a, b) => {
         if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount;
         if (b.score !== a.score) return b.score - a.score;
