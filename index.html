@@ -1996,8 +1996,14 @@
         selectItemType('ng');
         selectRepeatType('none');
 
-        const visibleDays = getVisibleWeekendDays();
-        daySelect.value = visibleDays[0].dateStr;
+        const todayStr = toDateStr(new Date());
+        const hasToday = selectableDays.some(d => d.dateStr === todayStr);
+        if (hasToday) {
+          daySelect.value = todayStr;
+        } else {
+          const nextWeekend = selectableDays.find(d => d.dateStr > todayStr);
+          daySelect.value = nextWeekend ? nextWeekend.dateStr : selectableDays[0].dateStr;
+        }
         document.getElementById('modalStartTime').value = '10:00';
         document.getElementById('modalEndTime').value = '13:00';
         memoInput.value = '';
