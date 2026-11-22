@@ -492,6 +492,7 @@
       gap: 4px;
       font-size: 0.72rem;
       color: var(--text-sub);
+      flex-shrink: 0;
     }
     .sync-dot {
       width: 7px;
@@ -536,13 +537,30 @@
       align-items: center;
     }
 
+    .setting-row-2col {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .setting-col {
+      flex: 1;
+    }
+
+    .setting-sublabel {
+      display: block;
+      font-size: 0.76rem;
+      color: var(--text-sub);
+      margin-bottom: 4px;
+    }
+
     .name-input-row input[type="text"],
     .setting-select {
       width: 100%;
       padding: 10px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-family: inherit;
       background: var(--input-bg);
       color: var(--text);
@@ -553,9 +571,9 @@
       appearance: none;
       background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
       background-repeat: no-repeat;
-      background-position: right 12px center;
+      background-position: right 10px center;
       background-size: 10px auto;
-      padding-right: 30px;
+      padding-right: 28px;
     }
 
     /* 履歴リスト（タップで編集） */
@@ -962,6 +980,51 @@
         </div>
       </div>
 
+      <!-- あなたの優先時間帯（各自の端末で設定・候補の並び順に反映） -->
+      <div class="section-card">
+        <div class="card-title">あなたの優先時間帯</div>
+        <p class="card-desc">
+          上部バーの「今月の候補」で、ここで選んだ曜日や時間帯が上位（左側）に表示されるようになります。（自分の端末のみに反映）
+        </p>
+        <div class="setting-row-2col">
+          <div class="setting-col">
+            <span class="setting-sublabel">優先する曜日</span>
+            <select id="prefDaySelect" class="setting-select" onchange="saveSettings()">
+              <option value="none" selected>指定なし（日付順）</option>
+              <option value="6">土曜日を優先</option>
+              <option value="0">日曜日を優先</option>
+            </select>
+          </div>
+          <div class="setting-col">
+            <span class="setting-sublabel">優先する時間帯</span>
+            <select id="prefSlotSelect" class="setting-select" onchange="saveSettings()">
+              <option value="none" selected>指定なし</option>
+              <option value="morning">午前中（〜12:00）</option>
+              <option value="afternoon">午後（12:00〜18:00）</option>
+              <option value="night">夜（18:00〜）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- カレンダーの表示時間（開始〜終了時刻を可変に） -->
+      <div class="section-card">
+        <div class="card-title">カレンダーの表示時間</div>
+        <p class="card-desc">
+          カレンダーに表示する開始時刻と終了時刻を変更できます。（自分の端末のみに反映）
+        </p>
+        <div class="setting-row-2col">
+          <div class="setting-col">
+            <span class="setting-sublabel">開始時刻</span>
+            <select id="calStartHourSelect" class="setting-select" onchange="saveCalHours()"></select>
+          </div>
+          <div class="setting-col">
+            <span class="setting-sublabel">終了時刻</span>
+            <select id="calEndHourSelect" class="setting-select" onchange="saveCalHours()"></select>
+          </div>
+        </div>
+      </div>
+
       <!-- スケジュールの長さ（“以上”なし） -->
       <div class="section-card">
         <div class="card-title">スケジュールの長さ</div>
@@ -1155,12 +1218,9 @@
     }
     let currentRoomId = getInitialRoomId();
 
-    // クラウドからリアルタイム受信した全メンバーデータ
     let roomMembersData = {};
     let unsubscribeRoom = null;
 
-    const START_HOUR = 8;
-    const END_HOUR = 22;
     let hourHeight = 46;
     let weekOffset = 0;
     let showAlmostOne = false;
@@ -1169,6 +1229,22 @@
 
     const RULES_STORAGE_KEY = 'scheduleMyRules_v1';
     const ONE_MONTH_MS = 31 * 24 * 60 * 60 * 1000;
+
+    function getCalStartHour() {
+      return Number(localStorage.getItem('scheduleCalStartHour') || '8');
+    }
+
+    function getCalEndHour() {
+      return Number(localStorage.getItem('scheduleCalEndHour') || '22');
+    }
+
+    function getPrefDay() {
+      return localStorage.getItem('schedulePrefDay') || 'none';
+    }
+
+    function getPrefSlot() {
+      return localStorage.getItem('schedulePrefSlot') || 'none';
+    }
 
     function toDateStr(d) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1251,13 +1327,11 @@
       syncMyDataToCloud();
     }
 
-    /* 自分のデータ（名前・移動時間・ルール一覧）を Firestore へ保存 */
     function syncMyDataToCloud() {
       const myName = document.getElementById('userNameInput').value.trim();
       const myRules = getMyRules();
       const myTravel = getMyTravelMin();
 
-      // 名前も予定もまだ完全に空の場合はクラウドに空データを書かない
       if (!myName && myRules.length === 0) return;
 
       const dot = document.getElementById('syncDot');
@@ -1275,7 +1349,6 @@
       });
     }
 
-    /* Firestore から同じルームの全メンバーデータをリアルタイム受信 */
     function subscribeToRoom(roomId) {
       if (unsubscribeRoom) {
         unsubscribeRoom();
@@ -1291,7 +1364,6 @@
           });
           roomMembersData = dataMap;
 
-          // 自分のデータがクラウドに未登録でローカルにある場合は同期する
           if (!dataMap[MY_USER_ID]) {
             syncMyDataToCloud();
           }
@@ -1304,7 +1376,6 @@
         });
     }
 
-    /* 指定日の予定を任意のルール配列から展開する共通関数 */
     function expandRulesForDate(rules, dateStr) {
       const dow = getDayOfWeek(dateStr);
       const result = [];
@@ -1367,14 +1438,12 @@
       return items.sort((a, b) => a.dateStr.localeCompare(b.dateStr) || a.start - b.start);
     }
 
-    /* クラウド上の全メンバー＋自分の最新データを合体させて指定日の予定一覧を返す */
     function getAllResponsesForDate(dateStr) {
       const combined = [];
       const myName = document.getElementById('userNameInput').value.trim();
       const myTravel = getMyTravelMin();
       const myRules = getMyRules();
 
-      // 1. まず自分のデータを追加（名前か予定がある場合）
       if (myName || myRules.length > 0) {
         combined.push({
           uid: MY_USER_ID,
@@ -1384,7 +1453,6 @@
         });
       }
 
-      // 2. クラウド上の他メンバーのデータを追加
       Object.keys(roomMembersData).forEach(uid => {
         if (uid === MY_USER_ID) return;
         const member = roomMembersData[uid];
@@ -1399,8 +1467,45 @@
       return combined;
     }
 
+    function initCalHourSelects() {
+      const startSel = document.getElementById('calStartHourSelect');
+      const endSel = document.getElementById('calEndHourSelect');
+
+      let startHtml = '';
+      for (let h = 5; h <= 15; h++) {
+        startHtml += `<option value="${h}">${h}:00</option>`;
+      }
+      startSel.innerHTML = startHtml;
+
+      let endHtml = '';
+      for (let h = 18; h <= 24; h++) {
+        endHtml += `<option value="${h}">${h}:00</option>`;
+      }
+      endSel.innerHTML = endHtml;
+
+      startSel.value = String(getCalStartHour());
+      endSel.value = String(getCalEndHour());
+    }
+
+    function saveCalHours() {
+      const s = Number(document.getElementById('calStartHourSelect').value);
+      const e = Number(document.getElementById('calEndHourSelect').value);
+      if (s >= e) {
+        alert('終了時刻は開始時刻より後にしてください。');
+        document.getElementById('calStartHourSelect').value = String(getCalStartHour());
+        document.getElementById('calEndHourSelect').value = String(getCalEndHour());
+        return;
+      }
+      localStorage.setItem('scheduleCalStartHour', String(s));
+      localStorage.setItem('scheduleCalEndHour', String(e));
+      renderCalendar();
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+      initCalHourSelects();
       document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
+      document.getElementById('prefDaySelect').value = getPrefDay();
+      document.getElementById('prefSlotSelect').value = getPrefSlot();
       document.getElementById('minDurationSelect').value = String(getScheduleDuration());
       document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
       document.getElementById('roomIdInput').value = currentRoomId;
@@ -1469,10 +1574,14 @@
 
     function saveSettings(showAlert = false) {
       const name = document.getElementById('userNameInput').value.trim();
+      const prefDay = document.getElementById('prefDaySelect').value;
+      const prefSlot = document.getElementById('prefSlotSelect').value;
       const minDur = document.getElementById('minDurationSelect').value;
       const travel = document.getElementById('travelTimeSelect').value;
 
       localStorage.setItem('scheduleUserName', name);
+      localStorage.setItem('schedulePrefDay', prefDay);
+      localStorage.setItem('schedulePrefSlot', prefSlot);
       localStorage.setItem('scheduleMinDuration', minDur);
       localStorage.setItem('scheduleTravelMin', travel);
 
@@ -1707,8 +1816,8 @@
     function getAvailableRanges(dateStr, includeAlmost = false) {
       const responses = getAllResponsesForDate(dateStr);
       const schedDur = getScheduleDuration();
-      const dayStart = START_HOUR * 60;
-      const dayEnd = END_HOUR * 60;
+      const dayStart = getCalStartHour() * 60;
+      const dayEnd = getCalEndHour() * 60;
       const rawRanges = [];
       let currentBlock = null;
 
@@ -1766,6 +1875,47 @@
       return rawRanges.filter(r => (r.end - r.start) >= schedDur);
     }
 
+    /* 各自の「あなたの優先時間帯」に基づいて候補の優先度スコアを計算 */
+    function calcCandidatePriority(dateStr, startMin, endMin) {
+      const prefDay = getPrefDay();
+      const prefSlot = getPrefSlot();
+      const schedDur = getScheduleDuration();
+      let score = 0;
+
+      // 1. 優先曜日チェック（一致で +20点）
+      if (prefDay !== 'none' && String(getDayOfWeek(dateStr)) === prefDay) {
+        score += 20;
+      }
+
+      // 2. 優先時間帯チェック（その時間帯内にスケジュールの長さ分を確保できるなら +10点、一部重なるなら +5点）
+      if (prefSlot !== 'none') {
+        let slotStart = 0;
+        let slotEnd = 24 * 60;
+        if (prefSlot === 'morning') {
+          slotStart = 0;
+          slotEnd = 12 * 60;
+        } else if (prefSlot === 'afternoon') {
+          slotStart = 12 * 60;
+          slotEnd = 18 * 60;
+        } else if (prefSlot === 'night') {
+          slotStart = 18 * 60;
+          slotEnd = 24 * 60;
+        }
+
+        const overlapStart = Math.max(startMin, slotStart);
+        const overlapEnd = Math.min(endMin, slotEnd);
+        const overlapDur = overlapEnd - overlapStart;
+
+        if (overlapDur >= schedDur) {
+          score += 10;
+        } else if (overlapDur > 0) {
+          score += 5;
+        }
+      }
+
+      return score;
+    }
+
     function renderMonthCandidates(visibleDays) {
       const firstDate = new Date(visibleDays[0].dateStr + 'T00:00:00');
       const targetYear = firstDate.getFullYear();
@@ -1785,12 +1935,21 @@
           ranges.forEach(r => {
             perfectSlots.push({
               dateStr: dStr,
+              start: r.start,
+              end: r.end,
+              priority: calcCandidatePriority(dStr, r.start, r.end),
               label: `${formatDayLabel(dStr)} ${minToTime(r.start)}〜${minToTime(r.end)}`
             });
           });
         }
         d.setDate(d.getDate() + 1);
       }
+
+      // 優先度が高い順に並べ替え（同点なら日付・時間が早い順）
+      perfectSlots.sort((a, b) => {
+        if (b.priority !== a.priority) return b.priority - a.priority;
+        return a.dateStr.localeCompare(b.dateStr) || a.start - b.start;
+      });
 
       const listEl = document.getElementById('monthCandidateList');
       if (perfectSlots.length === 0) {
@@ -1807,6 +1966,8 @@
       const sampleResponses = getAllResponsesForDate(visibleDays[0].dateStr);
       const myTravel = getMyTravelMin();
       const schedDur = getScheduleDuration();
+      const startHour = getCalStartHour();
+      const endHour = getCalEndHour();
 
       renderMonthCandidates(visibleDays);
 
@@ -1817,7 +1978,7 @@
 
       const gutter = document.getElementById('timeGutter');
       let gutterHtml = '';
-      for (let h = START_HOUR; h < END_HOUR; h++) {
+      for (let h = startHour; h < endHour; h++) {
         gutterHtml += `<div class="time-label" style="height:${hourHeight}px;"><span>${h}:00</span></div>`;
       }
       gutter.innerHTML = gutterHtml;
@@ -1828,7 +1989,7 @@
       grid.innerHTML = visibleDays.map(dayObj => {
         const dStr = dayObj.dateStr;
         let cellsHtml = '';
-        for (let h = START_HOUR; h < END_HOUR; h++) {
+        for (let h = startHour; h < endHour; h++) {
           const halfLine = hourHeight >= 52 ? '<div class="half-line"></div>' : '';
           cellsHtml += `<div class="hour-cell" style="height:${hourHeight}px;">${halfLine}</div>`;
         }
@@ -1838,21 +1999,21 @@
           let html = '';
 
           if (myTravel > 0) {
-            const preTop = (Math.max(it.start - myTravel, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
-            const preBot = (Math.min(it.start, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            const preTop = (Math.max(it.start - myTravel, startHour * 60) - startHour * 60) * pxPerMin;
+            const preBot = (Math.min(it.start, endHour * 60) - startHour * 60) * pxPerMin;
             if (preBot > preTop) {
               html += `<div class="my-travel-block" style="top:${preTop}px; height:${preBot - preTop}px;">移動</div>`;
             }
 
-            const postTop = (Math.max(it.end, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
-            const postBot = (Math.min(it.end + myTravel, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+            const postTop = (Math.max(it.end, startHour * 60) - startHour * 60) * pxPerMin;
+            const postBot = (Math.min(it.end + myTravel, endHour * 60) - startHour * 60) * pxPerMin;
             if (postBot > postTop) {
               html += `<div class="my-travel-block" style="top:${postTop}px; height:${postBot - postTop}px;">移動</div>`;
             }
           }
 
-          const top = (Math.max(it.start, START_HOUR * 60) - START_HOUR * 60) * pxPerMin;
-          const bottom = (Math.min(it.end, END_HOUR * 60) - START_HOUR * 60) * pxPerMin;
+          const top = (Math.max(it.start, startHour * 60) - startHour * 60) * pxPerMin;
+          const bottom = (Math.min(it.end, endHour * 60) - startHour * 60) * pxPerMin;
           const height = Math.max(0, bottom - top);
           if (height > 0) {
             const tag = it.type === 'maybe' ? '自分△' : '自分×';
@@ -1863,7 +2024,7 @@
 
         const ranges = getAvailableRanges(dStr, showAlmostOne);
         const freeHtml = ranges.map(range => {
-          const top = (range.start - START_HOUR * 60) * pxPerMin;
+          const top = (range.start - startHour * 60) * pxPerMin;
           const height = (range.end - range.start) * pxPerMin;
 
           let cls = 'free-block';
