@@ -42,6 +42,7 @@
       --almost-border: #94a3b8;
       --ok-green: #10b981;
       --star-color: #d97706;
+      --holiday-color: #dc2626;
     }
 
     /* 端末設定に合わせたダークモード */
@@ -71,6 +72,7 @@
         --almost-border: #64748b;
         --ok-green: #34d399;
         --star-color: #fbbf24;
+        --holiday-color: #f87171;
       }
     }
 
@@ -106,13 +108,38 @@
     .btn-copy-mini,
     .pref-chip,
     .pref-day-label,
-    .room-chip {
+    .room-chip,
+    .pwa-banner-btn {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "HiraginoSans-W6", "Hiragino Sans W6", sans-serif;
       font-weight: 600;
     }
 
     .page { display: none; width: 100%; }
     .page.active { display: block; }
+
+    /* スマホブラウザ閲覧時のみ表示するPWA案内バー */
+    .pwa-notice-bar {
+      background: var(--accent);
+      border-bottom: 1px solid var(--accent-border);
+      padding: 8px 14px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+    .pwa-banner-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.74rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
 
     /* 最上部：「今月の候補」＋ 左右の週送り三角バナー */
     .candidate-banner {
@@ -348,13 +375,26 @@
     .day-head {
       flex: 1;
       text-align: center;
-      padding: 9px 2px;
-      font-size: 0.82rem;
+      padding: 8px 2px;
+      font-size: 0.8rem;
       color: var(--primary);
       border-right: 1px solid var(--border);
+      line-height: 1.2;
+    }
+    .day-head.holiday {
+      color: var(--holiday-color);
     }
     .day-head:last-child {
       border-right: none;
+    }
+    .holiday-sub {
+      display: block;
+      font-size: 0.62rem;
+      font-weight: normal;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .cal-body {
@@ -593,10 +633,17 @@
     }
 
     .pref-day-label {
-      width: 54px;
-      font-size: 0.86rem;
+      width: 58px;
+      font-size: 0.84rem;
       color: var(--primary);
       flex-shrink: 0;
+      line-height: 1.2;
+    }
+    .pref-day-label span {
+      display: block;
+      font-size: 0.66rem;
+      font-weight: normal;
+      color: var(--text-sub);
     }
 
     .pref-chips-wrap {
@@ -911,6 +958,22 @@
     .btn-secondary { background: var(--card-active); color: var(--text); border: 1px solid var(--border); }
     .btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--border); }
 
+    /* PWAホーム画面追加手順ボックス */
+    .pwa-step-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .pwa-step-title {
+      color: var(--primary);
+      margin-bottom: 4px;
+      display: block;
+    }
+
     /* 詳細モーダル内のリスト */
     .detail-list {
       list-style: none;
@@ -1013,6 +1076,12 @@
 </head>
 <body>
 
+  <!-- スマホブラウザで開かれた時だけ表示するPWA誘導バナー -->
+  <div class="pwa-notice-bar" id="pwaNoticeBar">
+    <span>閲覧モード中（予定の入力はホーム画面に追加後に行えます）</span>
+    <button type="button" class="pwa-banner-btn" onclick="openPwaGuideModal()">追加方法</button>
+  </div>
+
   <!-- 1. カレンダータブ -->
   <div id="pageCalendar" class="page active">
 
@@ -1081,7 +1150,7 @@
           <span class="room-tag-pill" id="inputRoomBadge">ルーム：default-group</span>
         </div>
         <p class="card-desc">
-          このルーム専用の都合が悪い時間（×）や、できれば避けたい時間（△）を登録してください。他のルームとは別に保存されます。
+          土日・祝日の都合が悪い時間（×）や、できれば避けたい時間（△）を登録してください。他のルームとは別に保存されます。
         </p>
         <button type="button" class="btn btn-primary" style="width: 100%;" onclick="openScheduleModal()">＋ 時間帯を追加する</button>
       </div>
@@ -1102,11 +1171,14 @@
   <div id="pageSettings" class="page">
     <div class="container">
 
-      <!-- あなたの名前 -->
+      <!-- あなたの名前（必須） -->
       <div class="section-card">
-        <div class="card-title">あなたの名前</div>
+        <div class="card-title">
+          <span>あなたの名前</span>
+          <span class="room-tag-pill" id="nameRequiredBadge">入力必須</span>
+        </div>
         <div class="name-input-row">
-          <input type="text" id="userNameInput" placeholder="例：田中">
+          <input type="text" id="userNameInput" placeholder="例：田中（入力必須）">
           <button type="button" class="btn btn-primary" style="flex: 0 0 auto; padding: 10px 16px;" onclick="saveSettings(true)">保存</button>
         </div>
       </div>
@@ -1134,11 +1206,30 @@
         <button type="button" class="btn btn-primary" style="width: 100%;" onclick="copyInviteLink()">友達に送る招待URLをコピー</button>
       </div>
 
+      <!-- スケジュールの長さ（ルーム全員にリアルタイム同期） -->
+      <div class="section-card">
+        <div class="card-title">
+          <span>スケジュールの長さ</span>
+          <span class="room-tag-pill">全員に同期</span>
+        </div>
+        <p class="card-desc">
+          設定した長さのスケジュールを開催できる時間帯だけを候補として表示します。（同じルームのメンバー全員に自動で同期されます）
+        </p>
+        <select id="minDurationSelect" class="setting-select" onchange="changeRoomDuration()">
+          <option value="30">30分</option>
+          <option value="60" selected>1時間</option>
+          <option value="90">1時間30分</option>
+          <option value="120">2時間</option>
+          <option value="180">3時間</option>
+          <option value="240">4時間</option>
+        </select>
+      </div>
+
       <!-- あなたの優先時間帯（ルーム別・曜日別・複数選択・全員合算で提案） -->
       <div class="section-card">
         <div class="card-title">あなたの優先時間帯</div>
         <p class="card-desc">
-          このルームで集まりやすい曜日・時間帯を複数タップして選んでください。メンバー全員の希望と照らし合わせ、希望が重なる候補から上位に提案されます。
+          集まりやすい曜日・時間帯を複数タップして選んでください。（祝日は日曜・休日枠として合算されます）
         </p>
         <div class="pref-grid">
           <div class="pref-day-row">
@@ -1150,7 +1241,7 @@
             </div>
           </div>
           <div class="pref-day-row">
-            <div class="pref-day-label">日曜日</div>
+            <div class="pref-day-label">日・祝<span>休日</span></div>
             <div class="pref-chips-wrap">
               <div class="pref-chip" id="pref_sun_morning" onclick="togglePrefSlot('sun', 'morning')">午前<span>〜12:00</span></div>
               <div class="pref-chip" id="pref_sun_afternoon" onclick="togglePrefSlot('sun', 'afternoon')">午後<span>12:00〜18:00</span></div>
@@ -1176,22 +1267,6 @@
             <select id="calEndHourSelect" class="setting-select" onchange="saveCalHours()"></select>
           </div>
         </div>
-      </div>
-
-      <!-- スケジュールの長さ（“以上”なし） -->
-      <div class="section-card">
-        <div class="card-title">スケジュールの長さ</div>
-        <p class="card-desc">
-          設定した長さのスケジュールを開催できる時間帯だけを候補として表示します。
-        </p>
-        <select id="minDurationSelect" class="setting-select" onchange="saveSettings()">
-          <option value="30">30分</option>
-          <option value="60" selected>1時間</option>
-          <option value="90">1時間30分</option>
-          <option value="120">2時間</option>
-          <option value="180">3時間</option>
-          <option value="240">4時間</option>
-        </select>
       </div>
 
       <!-- あなたの片道移動時間（10分刻み・1時間半まで） -->
@@ -1302,6 +1377,38 @@
     </div>
   </div>
 
+  <!-- ポップアップ③：スマホブラウザ制限（ホーム画面追加ガイド）モーダル -->
+  <div class="modal-overlay" id="pwaGuideModal" onclick="if(event.target===this) closeModal('pwaGuideModal')">
+    <div class="modal-box">
+      <div class="modal-title">ホーム画面に追加して入力する</div>
+      <p class="card-desc" style="margin-bottom: 12px;">
+        スマホでのデータ重複や入力消えを防ぐため、予定の登録・変更は<b>ホーム画面に追加したアプリ</b>から行う仕様になっています。
+      </p>
+
+      <div class="pwa-step-box">
+        <b class="pwa-step-title">iPhone（Safari）の場合</b>
+        1. 画面下の共有ボタン（<b>□に↑</b>）をタップ<br>
+        2. メニュー内の<b>「ホーム画面に追加」</b>をタップ<br>
+        3. ホーム画面にできたアイコンから開く
+      </div>
+
+      <div class="pwa-step-box">
+        <b class="pwa-step-title">Android（Chrome）の場合</b>
+        1. 画面右上のメニュー（<b>︙</b>）をタップ<br>
+        2. <b>「ホーム画面に追加」</b>または<b>「アプリをインストール」</b>をタップ<br>
+        3. ホーム画面にできたアイコンから開く
+      </div>
+
+      <p style="font-size: 0.75rem; color: var(--text-sub); margin-bottom: 12px;">
+        ※LINE等のアプリ内ブラウザで開いている場合は、右下のメニューから「デフォルトのブラウザ（Safari / Chrome）で開く」を選んでから追加してください。
+      </p>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-primary" onclick="closeModal('pwaGuideModal')">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 下部タブバー（3タブ構成） -->
   <div class="tab-bar">
     <div class="tab-item active" id="tabCalendar" onclick="switchTab('pageCalendar')">カレンダー</div>
@@ -1316,6 +1423,135 @@
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // ==========================================
+    // 実行環境判定（PCブラウザ or PWAスタンドアロンなら入力許可）
+    // ==========================================
+    function isInputAllowedEnvironment() {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator.standalone === true);
+      if (isStandalone) return true;
+
+      // スマホ・タブレット判定（iPadOS 13+ のデスクトップUAも含む）
+      const ua = navigator.userAgent || '';
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      return !isMobile; // PCブラウザならtrue、スマホブラウザならfalse
+    }
+
+    function openPwaGuideModal() {
+      document.getElementById('pwaGuideModal').style.display = 'flex';
+    }
+
+    function checkInputAllowed() {
+      if (!isInputAllowedEnvironment()) {
+        openPwaGuideModal();
+        return false;
+      }
+      return true;
+    }
+
+    /* 名前未登録の「名無し」を防ぐガード */
+    function ensureUserNameRegistered() {
+      const savedName = (localStorage.getItem('scheduleUserName') || '').trim();
+      const inputName = (document.getElementById('userNameInput').value || '').trim();
+      if (!savedName && !inputName) {
+        alert('「名無し」を防ぐため、先に「設定」タブであなたの名前を登録してください！');
+        switchTab('pageSettings');
+        setTimeout(() => {
+          const el = document.getElementById('userNameInput');
+          if (el) el.focus();
+        }, 100);
+        return false;
+      }
+      return true;
+    }
+
+    // ==========================================
+    // 日本の祝日判定アルゴリズム（内閣府・祝日法準拠）
+    // ==========================================
+    const holidayCache = {};
+
+    function nthMondayDate(year, month, n) {
+      const firstDow = new Date(year, month - 1, 1).getDay();
+      const firstMon = 1 + ((8 - firstDow) % 7);
+      return firstMon + (n - 1) * 7;
+    }
+
+    function calcVernalEquinoxDay(year) {
+      return Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    }
+
+    function calcAutumnalEquinoxDay(year) {
+      return Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    }
+
+    function getJapaneseHolidaysForYear(year) {
+      if (holidayCache[year]) return holidayCache[year];
+      const map = {};
+      const add = (m, d, name) => {
+        const key = `${year}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        map[key] = name;
+      };
+
+      // 固定祝日・ハッピーマンデー・春分/秋分
+      add(1, 1, '元日');
+      add(1, nthMondayDate(year, 1, 2), '成人の日');
+      add(2, 11, '建国記念の日');
+      add(2, 23, '天皇誕生日');
+      add(3, calcVernalEquinoxDay(year), '春分の日');
+      add(4, 29, '昭和の日');
+      add(5, 3, '憲法記念日');
+      add(5, 4, 'みどりの日');
+      add(5, 5, 'こどもの日');
+      add(7, nthMondayDate(year, 7, 3), '海の日');
+      add(8, 11, '山の日');
+      add(9, nthMondayDate(year, 9, 3), '敬老の日');
+      add(9, calcAutumnalEquinoxDay(year), '秋分の日');
+      add(10, nthMondayDate(year, 10, 2), 'スポーツの日');
+      add(11, 3, '文化の日');
+      add(11, 23, '勤労感謝の日');
+
+      // 国民の休日（前日と翌日が祝日に挟まれた平日）
+      const cur = new Date(year, 0, 1);
+      while (cur.getFullYear() === year) {
+        const k = toDateStr(cur);
+        if (!map[k] && cur.getDay() !== 0) {
+          const prev = new Date(cur); prev.setDate(cur.getDate() - 1);
+          const next = new Date(cur); next.setDate(cur.getDate() + 1);
+          if (map[toDateStr(prev)] && map[toDateStr(next)]) {
+            map[k] = '国民の休日';
+          }
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+
+      // 振替休日（祝日が日曜日にあたるとき、その後の最初の非祝日）
+      const keys = Object.keys(map).sort();
+      keys.forEach(k => {
+        const d = new Date(k + 'T00:00:00');
+        if (d.getDay() === 0) {
+          const sub = new Date(d);
+          sub.setDate(d.getDate() + 1);
+          while (map[toDateStr(sub)]) {
+            sub.setDate(sub.getDate() + 1);
+          }
+          map[toDateStr(sub)] = '振替休日';
+        }
+      });
+
+      holidayCache[year] = map;
+      return map;
+    }
+
+    function getHolidayName(dateStr) {
+      const year = Number(dateStr.slice(0, 4));
+      return getJapaneseHolidaysForYear(year)[dateStr] || null;
+    }
+
+    function isTargetOffDay(dateStr) {
+      const dow = getDayOfWeek(dateStr);
+      if (dow === 0 || dow === 6) return true;
+      return Boolean(getHolidayName(dateStr));
     }
 
     // ==========================================
@@ -1391,7 +1627,6 @@
     }
     let currentRoomId = getInitialRoomId();
 
-    /* ルームごとに保存キーを独立させる */
     function getRulesStorageKey(roomId = currentRoomId) {
       return `scheduleMyRules_room_${roomId}`;
     }
@@ -1400,7 +1635,10 @@
       return `scheduleMyPrefs_room_${roomId}`;
     }
 
-    /* 以前のバージョン（共通保存）からの初回データ移行（default-group用） */
+    function getDurationStorageKey(roomId = currentRoomId) {
+      return `scheduleMinDuration_room_${roomId}`;
+    }
+
     function migrateLegacyDataIfNeeded() {
       const oldRules = localStorage.getItem('scheduleMyRules_v1');
       if (oldRules && !localStorage.getItem(getRulesStorageKey('default-group'))) {
@@ -1413,7 +1651,9 @@
     }
 
     let roomMembersData = {};
+    let sharedRoomDuration = null;
     let unsubscribeRoom = null;
+    let unsubscribeRoomMeta = null;
 
     let hourHeight = 46;
     let weekOffset = 0;
@@ -1431,7 +1671,6 @@
       return Number(localStorage.getItem('scheduleCalEndHour') || '22');
     }
 
-    /* 現在のルーム専用の優先時間帯を取得 */
     function getMyPrefs() {
       try {
         const raw = localStorage.getItem(getPrefsStorageKey());
@@ -1457,6 +1696,9 @@
     }
 
     function togglePrefSlot(dayKey, slotKey) {
+      if (!checkInputAllowed()) return;
+      if (!ensureUserNameRegistered()) return;
+
       const prefs = getMyPrefs();
       const arr = prefs[dayKey];
       const idx = arr.indexOf(slotKey);
@@ -1503,74 +1745,130 @@
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
-    function formatDayLabel(dateStr) {
+    function formatDayLabel(dateStr, includeHoliday = false) {
       const d = new Date(dateStr + 'T00:00:00');
       const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
-      return `${d.getMonth() + 1}/${d.getDate()}(${w})`;
+      const hol = getHolidayName(dateStr);
+      const base = `${d.getMonth() + 1}/${d.getDate()}(${w})`;
+      if (includeHoliday && hol) {
+        return `${base} ${hol}`;
+      }
+      return hol ? `${base}祝` : base;
     }
 
     function getDayOfWeek(dateStr) {
       return new Date(dateStr + 'T00:00:00').getDay();
     }
 
-    function getBaseSaturday() {
+    /* 基準となる週の月曜日を取得 */
+    function getBaseMonday() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const day = today.getDay();
-      const diffToSat = (day === 0) ? -1 : (6 - day);
-      const sat = new Date(today);
-      sat.setDate(today.getDate() + diffToSat);
-      return sat;
+      const diffToMon = (day === 0) ? -6 : (1 - day);
+      const mon = new Date(today);
+      mon.setDate(today.getDate() + diffToMon);
+      return mon;
     }
 
+    /* カレンダーに表示する2週間分の「土日＋祝日」一覧を取得 */
     function getVisibleWeekendDays() {
-      const baseSat = getBaseSaturday();
-      baseSat.setDate(baseSat.getDate() + weekOffset * 7);
+      const baseMon = getBaseMonday();
+      baseMon.setDate(baseMon.getDate() + weekOffset * 7);
 
       const list = [];
-      for (let w = 0; w < 2; w++) {
-        const sat = new Date(baseSat);
-        sat.setDate(baseSat.getDate() + w * 7);
-        const sun = new Date(sat);
-        sun.setDate(sat.getDate() + 1);
-
-        list.push({ dateStr: toDateStr(sat), label: formatDayLabel(toDateStr(sat)) });
-        list.push({ dateStr: toDateStr(sun), label: formatDayLabel(toDateStr(sun)) });
+      for (let i = 0; i < 14; i++) {
+        const d = new Date(baseMon);
+        d.setDate(baseMon.getDate() + i);
+        const dStr = toDateStr(d);
+        if (isTargetOffDay(dStr)) {
+          list.push({
+            dateStr: dStr,
+            label: formatDayLabel(dStr, false),
+            holidayName: getHolidayName(dStr)
+          });
+        }
       }
       return list;
     }
 
+    /* 予定追加モーダルの選択肢（過去4週間〜先8週間の土日＋祝日） */
     function getSelectableWeekendDays() {
-      const baseSat = getBaseSaturday();
-      baseSat.setDate(baseSat.getDate() - 28);
+      const baseMon = getBaseMonday();
+      baseMon.setDate(baseMon.getDate() - 28);
       const list = [];
-      for (let w = 0; w < 12; w++) {
-        const sat = new Date(baseSat);
-        sat.setDate(baseSat.getDate() + w * 7);
-        const sun = new Date(sat);
-        sun.setDate(sat.getDate() + 1);
-        list.push({ dateStr: toDateStr(sat), label: formatDayLabel(toDateStr(sat)) });
-        list.push({ dateStr: toDateStr(sun), label: formatDayLabel(toDateStr(sun)) });
+      for (let i = 0; i < 84; i++) {
+        const d = new Date(baseMon);
+        d.setDate(baseMon.getDate() + i);
+        const dStr = toDateStr(d);
+        if (isTargetOffDay(dStr)) {
+          list.push({
+            dateStr: dStr,
+            label: formatDayLabel(dStr, true)
+          });
+        }
       }
       return list;
     }
 
     function getScheduleDuration() {
+      if (sharedRoomDuration !== null) return sharedRoomDuration;
+      const roomCached = localStorage.getItem(getDurationStorageKey());
+      if (roomCached) return Number(roomCached);
       return Number(localStorage.getItem('scheduleMinDuration') || '60');
+    }
+
+    function changeRoomDuration() {
+      if (!checkInputAllowed()) {
+        document.getElementById('minDurationSelect').value = String(getScheduleDuration());
+        return;
+      }
+      const newDur = Number(document.getElementById('minDurationSelect').value);
+      sharedRoomDuration = newDur;
+      localStorage.setItem(getDurationStorageKey(), String(newDur));
+
+      const dot = document.getElementById('syncDot');
+      if (dot) dot.classList.add('connecting');
+
+      db.collection('rooms').doc(currentRoomId).set({
+        minDuration: newDur,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).then(() => {
+        if (dot) dot.classList.remove('connecting');
+      }).catch(err => {
+        console.error('Duration sync error:', err);
+      });
+
+      renderCalendar();
     }
 
     function getMyTravelMin() {
       return Number(localStorage.getItem('scheduleTravelMin') || '0');
     }
 
-    /* 現在のルーム専用の予定ルール一覧を取得 */
+    /* 過去1ヶ月以上前の単発予定を自動破棄（ガベージコレクション）して取得 */
+    function purgeExpiredRules(rulesList) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const cutoffDate = new Date(today);
+      cutoffDate.setDate(today.getDate() - 31);
+      const cutoffDateStr = toDateStr(cutoffDate);
+      const cutoffMs = Date.now() - ONE_MONTH_MS;
+
+      return (rulesList || []).filter(r => {
+        if (r.repeat === 'weekly') return true;
+        if (r.dateStr && r.dateStr < cutoffDateStr) return false;
+        if (r.createdAt && r.createdAt < cutoffMs) return false;
+        return true;
+      });
+    }
+
     function getMyRules() {
       const key = getRulesStorageKey();
       const raw = localStorage.getItem(key);
       if (!raw) return [];
       const list = JSON.parse(raw);
-      const cutoff = Date.now() - ONE_MONTH_MS;
-      const valid = list.filter(r => r.repeat === 'weekly' || (r.createdAt || Date.now()) >= cutoff);
+      const valid = purgeExpiredRules(list);
       if (valid.length !== list.length) {
         localStorage.setItem(key, JSON.stringify(valid));
       }
@@ -1578,27 +1876,29 @@
     }
 
     function saveMyRules(list) {
-      localStorage.setItem(getRulesStorageKey(), JSON.stringify(list));
+      const cleaned = purgeExpiredRules(list);
+      localStorage.setItem(getRulesStorageKey(), JSON.stringify(cleaned));
       syncMyDataToCloud();
     }
 
-    /* 自分のデータ（名前・移動時間・このルームの予定・このルームの優先時間帯）を Firestore へ同期 */
+    /* 自分のデータを Firestore へ同期（送信前にも必ず過去データを破棄＆名前必須チェック） */
     function syncMyDataToCloud() {
-      const myName = document.getElementById('userNameInput').value.trim();
-      const myRules = getMyRules();
+      if (!isInputAllowedEnvironment()) return;
+
+      const myName = (document.getElementById('userNameInput').value || localStorage.getItem('scheduleUserName') || '').trim();
+      if (!myName) return; // 「名無し」データは送信しない
+
+      const cleanedRules = purgeExpiredRules(getMyRules());
       const myTravel = getMyTravelMin();
       const myPrefs = getMyPrefs();
-      const hasAnyPref = myPrefs.sat.length > 0 || myPrefs.sun.length > 0;
-
-      if (!myName && myRules.length === 0 && !hasAnyPref) return;
 
       const dot = document.getElementById('syncDot');
       if (dot) dot.classList.add('connecting');
 
       db.collection('rooms').doc(currentRoomId).collection('members').doc(MY_USER_ID).set({
-        name: myName || '名無し',
+        name: myName,
         travelMin: myTravel,
-        rules: myRules,
+        rules: cleanedRules,
         prefs: myPrefs,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       }).then(() => {
@@ -1609,11 +1909,24 @@
     }
 
     function subscribeToRoom(roomId) {
-      if (unsubscribeRoom) {
-        unsubscribeRoom();
-      }
+      if (unsubscribeRoom) unsubscribeRoom();
+      if (unsubscribeRoomMeta) unsubscribeRoomMeta();
+
       const dot = document.getElementById('syncDot');
       if (dot) dot.classList.add('connecting');
+
+      unsubscribeRoomMeta = db.collection('rooms').doc(roomId)
+        .onSnapshot(doc => {
+          if (doc.exists && doc.data().minDuration) {
+            sharedRoomDuration = Number(doc.data().minDuration);
+            localStorage.setItem(getDurationStorageKey(roomId), String(sharedRoomDuration));
+            const sel = document.getElementById('minDurationSelect');
+            if (sel) sel.value = String(sharedRoomDuration);
+            renderCalendar();
+          }
+        }, err => {
+          console.error('Room meta listen error:', err);
+        });
 
       unsubscribeRoom = db.collection('rooms').doc(roomId).collection('members')
         .onSnapshot(snapshot => {
@@ -1687,9 +2000,8 @@
       const items = [];
       const cur = new Date(start);
       while (cur <= end) {
-        const dow = cur.getDay();
-        if (dow === 0 || dow === 6) {
-          const dStr = toDateStr(cur);
+        const dStr = toDateStr(cur);
+        if (isTargetOffDay(dStr)) {
           items.push(...getMyItemsForDate(dStr));
         }
         cur.setDate(cur.getDate() + 1);
@@ -1699,16 +2011,15 @@
 
     function getAllResponsesForDate(dateStr) {
       const combined = [];
-      const myName = document.getElementById('userNameInput').value.trim();
+      const myName = (document.getElementById('userNameInput').value || localStorage.getItem('scheduleUserName') || '').trim();
       const myTravel = getMyTravelMin();
       const myRules = getMyRules();
       const myPrefs = getMyPrefs();
-      const hasAnyPref = myPrefs.sat.length > 0 || myPrefs.sun.length > 0;
 
-      if (myName || myRules.length > 0 || hasAnyPref) {
+      if (myName) {
         combined.push({
           uid: MY_USER_ID,
-          name: myName || 'あなた',
+          name: myName,
           travelMin: myTravel,
           prefs: myPrefs,
           items: expandRulesForDate(myRules, dateStr)
@@ -1718,10 +2029,11 @@
       Object.keys(roomMembersData).forEach(uid => {
         if (uid === MY_USER_ID) return;
         const member = roomMembersData[uid];
+        if (!member.name || member.name === '名無し') return;
         const mPrefs = member.prefs || { sat: [], sun: [] };
         combined.push({
           uid,
-          name: member.name || 'メンバー',
+          name: member.name,
           travelMin: member.travelMin || 0,
           prefs: {
             sat: Array.isArray(mPrefs.sat) ? mPrefs.sat : [],
@@ -1768,7 +2080,25 @@
       renderCalendar();
     }
 
+    function updateNameBadgeUI() {
+      const nameVal = (localStorage.getItem('scheduleUserName') || '').trim();
+      const badge = document.getElementById('nameRequiredBadge');
+      if (badge) {
+        if (nameVal) {
+          badge.textContent = '登録済み';
+          badge.style.opacity = '0.8';
+        } else {
+          badge.textContent = '入力必須';
+          badge.style.opacity = '1';
+        }
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
+      if (!isInputAllowedEnvironment()) {
+        document.getElementById('pwaNoticeBar').style.display = 'flex';
+      }
+
       migrateLegacyDataIfNeeded();
       addRoomToHistory(currentRoomId);
       updateRoomBadges();
@@ -1776,6 +2106,8 @@
       initCalHourSelects();
       renderPrefChips();
       document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
+      updateNameBadgeUI();
+
       document.getElementById('minDurationSelect').value = String(getScheduleDuration());
       document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
 
@@ -1842,13 +2174,24 @@
     }
 
     function saveSettings(showAlert = false) {
+      if (!checkInputAllowed()) {
+        document.getElementById('userNameInput').value = localStorage.getItem('scheduleUserName') || '';
+        document.getElementById('travelTimeSelect').value = String(getMyTravelMin());
+        return;
+      }
+
       const name = document.getElementById('userNameInput').value.trim();
-      const minDur = document.getElementById('minDurationSelect').value;
+      if (!name) {
+        alert('「名無し」を防ぐため、あなたの名前を入力してください！');
+        document.getElementById('userNameInput').focus();
+        return;
+      }
+
       const travel = document.getElementById('travelTimeSelect').value;
 
       localStorage.setItem('scheduleUserName', name);
-      localStorage.setItem('scheduleMinDuration', minDur);
       localStorage.setItem('scheduleTravelMin', travel);
+      updateNameBadgeUI();
 
       syncMyDataToCloud();
       renderCalendar();
@@ -1869,7 +2212,8 @@
       addRoomToHistory(currentRoomId);
       updateRoomBadges();
 
-      // このルーム専用の優先時間帯チップと履歴・カレンダーを再描画
+      sharedRoomDuration = null;
+      document.getElementById('minDurationSelect').value = String(getScheduleDuration());
       renderPrefChips();
       renderHistoryList();
 
@@ -1891,7 +2235,7 @@
     function copyInviteLink() {
       const baseUrl = window.location.origin + window.location.pathname;
       const inviteUrl = `${baseUrl}?room=${encodeURIComponent(currentRoomId)}`;
-      const msg = `週末の日程調整アプリです！ここから予定を入れてね👇\n${inviteUrl}`;
+      const msg = `週末・祝日の日程調整アプリです！ホーム画面に追加してから予定を入れてね👇\n${inviteUrl}`;
 
       navigator.clipboard.writeText(msg).then(() => {
         alert(`招待メッセージをコピーしました！そのままLINE等に貼り付けられます。\n\n${msg}`);
@@ -1913,7 +2257,7 @@
         const isMaybe = item.type === 'maybe';
         const badgeText = isMaybe ? '△' : '×';
         const badgeClass = isMaybe ? 'maybe' : 'ng';
-        const dateLabel = formatDayLabel(item.dateStr);
+        const dateLabel = formatDayLabel(item.dateStr, true);
         const repeatBadge = item.isWeekly ? `<span class="repeat-tag">↻ 毎週</span>` : '';
         const subText = item.memo
           ? item.memo
@@ -1949,6 +2293,9 @@
     }
 
     function openScheduleModal(ruleId = null, targetDateStr = null) {
+      if (!checkInputAllowed()) return;
+      if (!ensureUserNameRegistered()) return;
+
       const selectableDays = getSelectableWeekendDays();
       const daySelect = document.getElementById('modalDaySelect');
       daySelect.innerHTML = selectableDays.map(d => `<option value="${d.dateStr}">${d.label}</option>`).join('');
@@ -2001,9 +2348,10 @@
         if (hasToday) {
           daySelect.value = todayStr;
         } else {
-          const nextWeekend = selectableDays.find(d => d.dateStr > todayStr);
-          daySelect.value = nextWeekend ? nextWeekend.dateStr : selectableDays[0].dateStr;
+          const nextOffDay = selectableDays.find(d => d.dateStr > todayStr);
+          daySelect.value = nextOffDay ? nextOffDay.dateStr : selectableDays[0].dateStr;
         }
+
         document.getElementById('modalStartTime').value = '10:00';
         document.getElementById('modalEndTime').value = '13:00';
         memoInput.value = '';
@@ -2017,6 +2365,9 @@
     }
 
     function saveScheduleRule() {
+      if (!checkInputAllowed()) return;
+      if (!ensureUserNameRegistered()) return;
+
       const editId = document.getElementById('editRuleId').value;
       const dateStr = document.getElementById('modalDaySelect').value;
       const startStr = document.getElementById('modalStartTime').value;
@@ -2164,8 +2515,9 @@
 
     function evaluateGroupPreference(dateStr, startMin, endMin) {
       const dow = getDayOfWeek(dateStr);
-      const dayKey = (dow === 6) ? 'sat' : (dow === 0 ? 'sun' : null);
-      if (!dayKey) return { matchedNames: [], score: 0 };
+      const isHol = Boolean(getHolidayName(dateStr));
+      // 土曜日は 'sat'、日曜日または祝日は 'sun' として評価
+      const dayKey = (dow === 6 && !isHol) ? 'sat' : 'sun';
 
       const responses = getAllResponsesForDate(dateStr);
       const schedDur = getScheduleDuration();
@@ -2218,9 +2570,8 @@
       const perfectSlots = [];
 
       while (d.getMonth() === targetMonth) {
-        const dow = d.getDay();
-        if (dow === 0 || dow === 6) {
-          const dStr = toDateStr(d);
+        const dStr = toDateStr(d);
+        if (isTargetOffDay(dStr)) {
           const ranges = getAvailableRanges(dStr, false).filter(r => r.status === 'all_ok');
           ranges.forEach(r => {
             const prefEval = evaluateGroupPreference(dStr, r.start, r.end);
@@ -2265,9 +2616,10 @@
       renderMonthCandidates(visibleDays);
 
       const header = document.getElementById('calHeader');
-      header.innerHTML = '<div class="time-gutter-head"></div>' + visibleDays.map(d => `
-        <div class="day-head">${d.label}</div>
-      `).join('');
+      header.innerHTML = '<div class="time-gutter-head"></div>' + visibleDays.map(d => {
+        const holSub = d.holidayName ? `<span class="holiday-sub">${d.holidayName}</span>` : '';
+        return `<div class="day-head ${d.holidayName ? 'holiday' : ''}">${d.label}${holSub}</div>`;
+      }).join('');
 
       const gutter = document.getElementById('timeGutter');
       let gutterHtml = '';
@@ -2351,7 +2703,7 @@
       const responses = getAllResponsesForDate(dateStr);
       const schedDur = getScheduleDuration();
       const memberNames = responses.map(r => r.name).join('・');
-      const dayLabel = formatDayLabel(dateStr);
+      const dayLabel = formatDayLabel(dateStr, true);
       const timeRange = `${minToTime(startMin)}〜${minToTime(endMin)}`;
 
       const text = `【日程決定】${dayLabel} ${timeRange}（スケジュールの長さ：${formatDurationLabel(schedDur)}）${noteText ? `\n※${noteText}` : ''}\n参加メンバー：${memberNames}`;
@@ -2368,7 +2720,7 @@
       const schedDur = getScheduleDuration();
       const durLabel = formatDurationLabel(schedDur);
 
-      document.getElementById('detailModalTitle').textContent = `${formatDayLabel(dateStr)} の空き状況`;
+      document.getElementById('detailModalTitle').textContent = `${formatDayLabel(dateStr, true)} の空き状況`;
       document.getElementById('detailFreeLabel').textContent = `開催可能な時間帯（スケジュールの長さ：${durLabel}）`;
 
       const ranges = getAvailableRanges(dateStr, showAlmostOne);
